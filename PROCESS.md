@@ -97,3 +97,27 @@ It generated this scaffolding.
 ![Scaffolding 1](img/scaffolding-1.webp)
 
 ## Improve the scaffolding
+
+```
+- Make the navbar always dark
+- The sidebar cards must be independently collapsible
+- For the Game, Round, Stage, and Players, show the label above the value. The label must be small and the value must be large.
+- Use only me-* margins on the navbar to ensure that there is no left margin mis-aligning the elements at low width. Also place the elements inside a collapsible navbar section at low widths
+- The stage must have a bottom margin to avoid touching the sidebar's top on low-width screens
+```
+
+![Scaffolding 2](img/scaffolding-2.webp)
+
+```
+Prefer Bootstrap classes over <style> wherever possible.
+Style the "Game" to look exactly like the round, stage, and players. The size of the label and value should match for all 4 elements perfectly.
+Ensure that the labels round, stage, players will be visible in light mode against the dark navbar.
+```
+
+At this point, I made 3 manual edits because I felt I could do these better than the LLM:
+
+1. Forced the Elimination Game to break into 2 lines
+1. Replaced `fs-5` with `fs-4` to get the values have the exact same size, and removed redundant styling on the game selection
+1. Format document with... HTML Language Features
+
+![Scaffolding 3](img/scaffolding-3.webp)
