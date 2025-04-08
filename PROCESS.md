@@ -162,15 +162,69 @@ This led to shorter code (69 lines) but still had the same issue. I had to manua
 
 ```js
 // BEFORE
-    const [_, date, time] = filename.match(/_(\d{8})_(\d{6})/)?.groups ?? [];
+const [_, date, time] = filename.match(/_(\d{8})_(\d{6})/)?.groups ?? [];
 // AFTER
-    const [_, date, time] = filename.match(/_(\d{8})_(\d{6})/) ?? [];
+const [_, date, time] = filename.match(/_(\d{8})_(\d{6})/) ?? [];
 ```
 
 I also
 
-- Removed an incorrect `px-2` against `#gameSelect` in [`index.html`](index.html).
-- Decided to use the GitHub CDN and replaced `fetch(logs/...)` with `fetch(https://raw.githubusercontent.com/sanand0/elimination_game/refs/heads/main/logs/...)`.
-- Also moved `logs/index.txt` into `logs.txt` and changed script.js accordingly
+1. Removed an incorrect `px-2` against `#gameSelect` in [`index.html`](index.html).
+2. Decided to use the GitHub CDN and replaced `fetch(logs/...)` with `fetch(https://raw.githubusercontent.com/sanand0/elimination_game/refs/heads/main/logs/...)`.
+3. Also moved `logs/index.txt` into `logs.txt` and changed script.js accordingly
+4. Formatted `script.js` with Prettier
 
 Visually, nothing changes in a big way but the slider and the dropdown change the URL properly.
+
+## Data structure generation
+
+Independently, I asked ChatGPT:
+
+```
+I would like the game structure to be held in a simple JS object called game.
+What data structure would help the most in drawing this visual such that it will require very little code (since required information is in this data structure)?
+```
+
+Based on that input, I prompted CoPilot:
+
+```
+In script.js, instead of loading the .jsonl into `game`, create this data structure to make it easy to visualize each step.
+
+Use the sample .jsonl provided to infer the logic for this.
+
+const game = {
+  game: "...",
+  players: {
+    "P1": {
+      "id": "Player2_Game1739872030683891_deepseek-fireworks",  // from .player_id
+      "model": "deepseek-fireworks",  // everything after the last underscore
+    },
+    // and so on for all other players
+  },
+  // For each line, create a step
+  steps: [
+    {
+      step: 0,
+      // Current round and subround
+      round: 1,
+      subround: 1,
+      event: {
+        // Contents of the original line
+      },
+      // list active alliances
+      active: { "P1": true, "P2": false, ... }
+      // For each round so far, list who allied with who, e.g.:
+      alliances: [ {"P1": "P6", "P2": "P7", ...}, ... ],
+      // // For each round so far, list who voted to eliminate whom, e.g.
+      votes: [ {"P1": "P4", "P2": "P1", ... }, ... ],
+    },
+    // …and so on, for each line in the JSONL
+  ]
+};
+```
+
+This worked almost perfectly. I made these edits:
+
+1. Add `let currentAlliances = {}; let currentVotes = {};` which it forgot in the code.
+2. Re-apply change #2 I made manually in the last iteration (replacing the URL with the GitHub CDN).
+   That change was not there in the chat window, Copilot did _not_ pick it up.
