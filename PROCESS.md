@@ -13,7 +13,7 @@
 
 Based on this, I drew out a visual and explained it to O1 Pro asking it how to break down the task.
 
-![Design Sketch](design-sketch.webp)
+![Design Sketch](img/design-sketch.webp)
 
 ```
 The URL looks like /#?game=286&line=4 indicating that game 286.jsonl must be loaded and line 4 is the current step we're in.
@@ -48,3 +48,52 @@ Based on its recommendation (which was detailed), I'll use this sequence:
 - Sidebar 2: ALLIANCES Section
 - Sidebar 3: ELIMINATIONS Section
 - Refinements, Theming, & Final Touches
+
+## Create a scaffolding
+
+I ran this prompt on GitHub Copilot - Edit mode - Claude 3.5 Sonnet:
+
+```
+Create an index.html using Bootstrap via CDN. Scaffold it with a navbar
+
+The navbar has:
+
+- An app title (Elimination Game)
+- A game state dashboard with the Game (dropdown), Round (number), Stage (e.g. voting, alliances, etc.), and Players (number of players still active)
+- A timeline scrubber (a range slider) allowing users to jump to the specific line. This changes the URL which then triggers a change in app state.
+- A light/dark theme picker. Here is the code for the theme picker. Use the same CDN likns overall
+
+<!-- Include Bootstrap 5.3+ and Bootstrap icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Navbar</a>
+
+    <!-- Copy this dropdown anywhere in your page, e.g. inside a navbar -->
+    <div class="position-relative" role="group" aria-label="Toggle dark mode" title="Toggle Dark Mode">
+      <button class="dark-theme-toggle btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Open navigation menu">
+        <i class="bi bi-circle-half"></i> <span class="d-lg-none ms-2">Toggle theme</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><button class="dropdown-item" data-bs-theme-value="light"><i class="me-2 bi bi-sun-fill"></i> Light</button></li>
+        <li><button class="dropdown-item" data-bs-theme-value="dark"><i class="me-2 bi bi-moon-stars-fill"></i> Dark</button></li>
+        <li><button class="dropdown-item" data-bs-theme-value="auto"><i class="me-2 bi bi-circle-half"></i> Auto</button></li>
+      </ul>
+    </div>
+
+  </div>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@gramex/ui@0.3.1/dist/dark-theme.js" type="module"></script>
+
+Below the navbar is a section with a stage on the left and sidebar on the right. The stageon the left will contain a large responsive square SVG. The sidebar on the right contains 3 collapsible cards: Chat, Alliances, Eliminations.
+```
+
+It generated this scaffolding.
+
+![Scaffolding 1](img/scaffolding-1.webp)
+
+## Improve the scaffolding
