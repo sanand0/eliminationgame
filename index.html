@@ -37,8 +37,8 @@
         <div class="d-flex align-items-center gap-3 flex-grow-1 me-3">
           <div class="text-center">
             <div class="text-light small opacity-75">GAME</div>
-            <select class="form-select form-select-lg py-1 px-2" id="gameSelect">
-              <option selected>286</option>
+            <select class="form-select form-select-lg py-1" id="gameSelect">
+              <option value="" selected>Select game...</option>
             </select>
           </div>
 
@@ -80,8 +80,8 @@
     <div class="row mt-3">
       <div class="col-lg-8">
         <div class="stage-container">
-          <div class="game-stage">
-            <!-- SVG will go here -->
+          <div class="game-stage d-flex align-items-center justify-content-center">
+            <div id="step" class="display-1 text-body-secondary"></div>
           </div>
         </div>
       </div>
@@ -130,6 +130,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@gramex/ui@0.3.1/dist/dark-theme.js" type="module"></script>
+  <script src="script.js" type="module"></script>
 </body>
 
 </html>

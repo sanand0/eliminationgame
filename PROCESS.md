@@ -121,3 +121,56 @@ At this point, I made 3 manual edits because I felt I could do these better than
 1. Format document with... HTML Language Features
 
 ![Scaffolding 3](img/scaffolding-3.webp)
+
+## Implement data loading, timeline, and URL sync
+
+I manually copied a few [`logs`](logs/) from [the source](https://github.com/sanand0/elimination_game/tree/main/logs). Then:
+
+```
+Create a script.js as an ES module and include it from index.html.
+
+On load, fetch `logs/index.txt` which contains all log files (*.jsonl), one per line.
+The files are formatted as `*_TIMESTAMP_YYYYMMDD_HHMMSS.jsonl`.
+Populate the game dropdown with these values. The option label should look like `25 Jan 2025, 10:30`.
+The default value for the game dropdown should be empty.
+When the game dropdown changes to a non-empty option, fetch the file from `logs/[filename]` and store it in the global `game`, parsing the JSONL into an array of objects.
+Set the maximum value of the range slider to the length of game.
+When the range slider changes or the game dropdown changes, change the URL hash to `#?game=[filename]&step=[range-slider-value]` without modifying browser history.
+When the URL hash changes through any means, call `redraw(step)` which will draw the current (global) game state at the step specified. For now, just display the step prominently on the stage.
+```
+
+This code worked fine but I like refactoring, so I tried to condense the 111 line code:
+
+```
+Shorten and simplify the code in script.js to be elegant.
+User browser functionality more.
+For example, use Intl to format dates.
+Change the innerHTML of #gameSelect to concisely update the options.
+Remove redundant braces, e.g. for single-line blocks.
+```
+
+That brought it down to 74 lines but failed to populate the select dropdown. Rather than debug, I undid the change (Copilot's Undo feature is cool!) and tried:
+
+```
+Shorten and simplify the code in script.js to be elegant.
+User browser functionality more, e.g. use Intl to format dates.
+Prefer insertAdjacentHTML and replaceChildren.
+Remove redundant braces, e.g. for single-line blocks.
+```
+
+This led to shorter code (69 lines) but still had the same issue. I had to manually correct this line:
+
+```js
+// BEFORE
+    const [_, date, time] = filename.match(/_(\d{8})_(\d{6})/)?.groups ?? [];
+// AFTER
+    const [_, date, time] = filename.match(/_(\d{8})_(\d{6})/) ?? [];
+```
+
+I also
+
+- Removed an incorrect `px-2` against `#gameSelect` in [`index.html`](index.html).
+- Decided to use the GitHub CDN and replaced `fetch(logs/...)` with `fetch(https://raw.githubusercontent.com/sanand0/elimination_game/refs/heads/main/logs/...)`.
+- Also moved `logs/index.txt` into `logs.txt` and changed script.js accordingly
+
+Visually, nothing changes in a big way but the slider and the dropdown change the URL properly.
