@@ -94,16 +94,15 @@ const loadGame = async (filename) => {
         subround: event.subround || 1,
         event,
         eliminated: { ...eliminated },
-        alliances: [...roundAlliances],
-        votes: [...roundVotes]
+        alliances: [...roundAlliances, { ...currentAlliances }],
+        votes: [...roundVotes, { ...currentVotes }],
       };
     })
   };
-  console.log(game);
   const slider = document.getElementById('timelineScrubber');
   slider.max = game.steps.length - 1;
-  slider.value = 1;
-  updateHash(filename, 1);
+  slider.value = 0;
+  updateHash(filename, slider.value);
 };
 
 const colors = {
@@ -177,12 +176,23 @@ const drawStage = (step) => {
   const state = game.steps[step];
   const positions = getPositions();
 
-  // Helper to get model name from player ID
-  const getModelName = id => {
+  // Helper to render model name as badge
+  const modelBadge = id => {
     if (!id) return '';
     const match = id.match(/Player(\d+)/);
-    return match ? game.players[`P${match[1]}`].model : '';
+    return match ? badge(`P${match[1]}`) : '';
   };
+
+  // Draw background vote arrows
+  const voteArrows = [];
+  const currentVotes = state.votes.at(-1) || {};
+  Object.entries(currentVotes).forEach(([from, to]) => {
+    const f = positions[from];
+    const t = positions[to];
+    if (f && t) {
+      voteArrows.push(drawArrow(f.x, f.y, t.x, t.y, 'red', false));
+    }
+  });
 
   // Prepare highlights and arrows based on event type
   let highlights = [];
@@ -194,17 +204,17 @@ const drawStage = (step) => {
     const e = state.event;
     switch (e.type) {
       case 'conversation':
-        return getModelName(e.player_id);
+        return modelBadge(e.player_id);
       case 'private':
-        return `${getModelName(e.speaker_id)} → ${getModelName(e.target_id)}`;
+        return html`${modelBadge(e.speaker_id)} → ${modelBadge(e.target_id)}`;
       case 'preference_proposal':
       case 'preference_outcome':
-        return getModelName(game.players[e.target].id);
+        return modelBadge(game.players[e.target].id);
       case 'private_vote_reason':
       case 'private_revote_reason':
       case 'private_jury_reason':
       case 'vote':
-        return getModelName(e.voter_id);
+        return modelBadge(e.voter_id);
       default:
         return '';
     }
@@ -243,7 +253,7 @@ const drawStage = (step) => {
     case 'preference_proposal': {
       const [s, t] = [positions[state.event.proposer], positions[state.event.target]];
       arrows.push(drawArrow(s.x, s.y, t.x, t.y, '#ffd700', true));
-      centerText = `${getModelName(game.players[state.event.proposer].id)} proposes to ${getModelName(game.players[state.event.target].id)}`;
+      centerText = html`${modelBadge(game.players[state.event.proposer].id)} proposes to ${modelBadge(game.players[state.event.target].id)}`;
       break;
     }
     case 'preference_outcome': {
@@ -251,16 +261,16 @@ const drawStage = (step) => {
       if (state.event.rejected) {
         const rpos = positions[state.event.rejected];
         arrows.push(drawArrow(pos.x, pos.y, rpos.x, rpos.y, 'red', true));
-        centerText = `${getModelName(game.players[state.event.target].id)} rejects ${getModelName(game.players[state.event.rejected].id)}`;
+        centerText = html`${modelBadge(game.players[state.event.target].id)} rejects ${modelBadge(game.players[state.event.rejected].id)}`;
       } else {
         const apos = positions[state.event.accepted];
         arrows.push(drawArrow(pos.x, pos.y, apos.x, apos.y, 'green', true));
         if (state.event.replaced) {
           const rpos = positions[state.event.replaced];
           arrows.push(drawArrow(pos.x, pos.y, rpos.x, rpos.y, 'red', true));
-          centerText = `${getModelName(game.players[state.event.target].id)} accepts ${getModelName(game.players[state.event.accepted].id)} replacing ${getModelName(game.players[state.event.replaced].id)}`;
+          centerText = html`${modelBadge(game.players[state.event.target].id)} accepts ${modelBadge(game.players[state.event.accepted].id)} replacing ${modelBadge(game.players[state.event.replaced].id)}`;
         } else {
-          centerText = `${getModelName(game.players[state.event.target].id)} accepts ${getModelName(game.players[state.event.accepted].id)}`;
+          centerText = html`${modelBadge(game.players[state.event.target].id)} accepts ${modelBadge(game.players[state.event.accepted].id)}`;
         }
       }
       break;
@@ -278,23 +288,24 @@ const drawStage = (step) => {
       });
       if (sp && tp) {
         const s = positions[sp], t = positions[tp];
-        arrows.push(drawArrow(s.x, s.y, t.x, t.y, 'purple', true));
+        arrows.push(drawArrow(s.x, s.y, t.x, t.y, 'red', true));
       }
       centerText = state.event.type.includes('reason') ?
-        `${getModelName(state.event.voter_id)} thinks to eliminate ${getModelName(state.event.target_id)}: ${state.event.reason}` :
-        `${getModelName(state.event.voter_id)} voted against ${getModelName(state.event.target_id)}`;
+        html`${modelBadge(state.event.voter_id)} thinks to eliminate ${modelBadge(state.event.target_id)}: ${state.event.reason}` :
+        html`${modelBadge(state.event.voter_id)} voted against ${modelBadge(state.event.target_id)}`;
       break;
     }
     case 'elimination':
       centerText = 'Elimination starts';
       break;
     case 'final_results':
-      centerText = `Winner: ${state.event.winners.map((w) => game.players[w].model).join(", ")}`;
+      centerText = html`Winner: ${state.event.winners.map(w => modelBadge(w))}`;
       break;
   }
 
   return html`
     <svg viewBox="0 0 ${RADIUS * 2} ${RADIUS * 2}" class="w-100 h-100" width="1000">
+      ${voteArrows}
       ${highlights}
       ${arrows}
 
@@ -445,7 +456,7 @@ const updateHash = (filename, step) => {
   }
 };
 
-const handleHashChange = () => redraw(+new URLSearchParams(location.hash.slice(2)).get("step") || 1);
+const handleHashChange = () => redraw(+new URLSearchParams(location.hash.slice(2)).get("step") || 0);
 
 const redraw = step => {
   const state = game.steps[step];
@@ -499,11 +510,12 @@ const init = async () => {
   window.addEventListener("hashchange", handleHashChange);
 
   const gameFile = new URLSearchParams(location.hash.slice(2)).get("game");
-  const step = +new URLSearchParams(location.hash.slice(2)).get("step") || 1;
+  const step = +new URLSearchParams(location.hash.slice(2)).get("step") || 0;
   if (gameFile) {
     select.value = gameFile;
     await loadGame(gameFile);
     document.getElementById("timelineScrubber").value = step;
+    updateHash(gameFile, step);
     redraw(step);
   }
 };

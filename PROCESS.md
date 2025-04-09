@@ -439,3 +439,29 @@ That worked well. I made a few manual edits:
 
 1. Fix winner formatting by replacing `getModelName(w)` with `game.players[w].model` and `playerBadge(w)` with `badge(w)`
 2. Setting the step on page load in the UI: `document.getElementById("timelineScrubber").value = step;`
+
+
+```
+- In the alliances and voting tables, make the table header stand out with a contrasting color.
+- In the center text message, begin with a <h6> mentioning the speaker or initiator
+```
+
+![Screenshot](img/correct-ui-errors.webp)
+
+## Tweaks
+
+I made a few manual edits.
+
+- Show the votes against a player live on the voting table by changing `votes: [...roundVotes]` to `votes: [...roundVotes, {...currentVotes}]`
+- Change the voting arrow color from `"purple"` to `"red"`
+- Added `updateHash(gameFile, step);` on startup
+- Replaced the minimum step from 1 to 0
+
+Then I prompted:
+
+```
+- Change all model names in the center text to the badges
+- At every step, show all votes against a model via thin 50% transparent red arrows from key to value in game.steps[step].votes.at(-1) object which will look like {P1: "P2", ...}
+```
+
+![Screenshot](img/tweaks.webp)
