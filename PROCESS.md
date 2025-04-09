@@ -377,3 +377,48 @@ This worked perfectly too.
 **NOTE**: This was after _5 failed attempts_ in which I had combined these changes into 1 prompt.
 
 ![Screenshot](img/improve-ui.webp)
+
+## Render the stage
+
+```
+Generate a square, responsive SVG in game stage using Bootstrap.
+Import svg from lit-html and use `svg` where required.
+It contains all players laid out in a circle.
+Each player is a circle colored based on the player colors.
+It contains the player number (1, 2, ...) as text inside it in white.
+Above the player circle, the player model is visible.
+
+Leave plenty of space for a "center text" at the center of the circle that will contain centered text.
+The text may be a full paragraph, so handle the font size and circle size accordingly.
+The center text must have elegant rounded corners, and a background rgba(var(--bs-body-color-rgb), 0.1).
+We need word wrapping, so use foreignElement to wrap a div which holds the text.
+
+For each step, based on `step[].event.type`, draw the stage as follows:
+
+- conversation: Highlight (via a semi-transparent circle 2-3X the radius of the player) the player to highlight them.
+  Show event.message in the center text.
+- private: Highlight players event.speaker_id. Draw an black arrow to event.target_id. Show event.message in the center text.
+- preference_proposal: Yellow arrow from event.proposer to event.target.
+  Center text shows `[MODEL NAME 1] proposes to [MODEL NAME 2]` where model name is what's in the tooltip
+- preference_outcome: (all items in [BRACKETS] are the model name shown in the tooltip)
+  - If event.rejected, red arrow from event.target to event.rejected. Center text: [TARGET] rejects [REJECTED]
+  - If event.replaced, green arrow from event.target to event.accepted and red arrow from event.target to event.replaced.
+    Center text: [TARGET] accepts [ACCEPTED] replacing [REPLACED]
+  - Else: green arrow from event.target to event.accepted. Center text: [TARGET] accepts [ACCEPTED] replacing [REPLACED]
+- preference_result: Center text shows "Alliances formed"
+- private_vote_reason: Purple arrow from event.voter_id to event.target_id. Center text: [VOTER_ID] thinks to eliminate [TARGET_ID]: event.reason
+- private_revote_reason: Show Same as above
+- private_jury_reason: Show same as above.
+- vote: Purple arrow from event.voter_id to event.target_id. Center text: [VOTER_ID] voted against [TARGET_ID]
+- elimination: Center text: "Elimination starts"
+- final_results: Center text: Show `Winners: ${winners}` where winners is a list of players like ["P5"]
+```
+
+This nearly worked. I made to UI edits:
+
+1. Add a `width="1000"` to the SVG to get a minimim size
+2. Add a `font-size: 0.7rem;` to the text container so the text will fit
+
+At this point, we're nearly there!
+
+![Screenshot](img/render-the-stage.webp)

@@ -131,7 +131,178 @@ const stages = {
   final_results: { text: "Done", class: "text-bg-dark" }
 };
 
-import { render, html } from "https://cdn.jsdelivr.net/npm/lit-html@3/+esm";
+import { render, html, svg } from "https://cdn.jsdelivr.net/npm/lit-html@3/+esm";
+
+const RADIUS = 300;        // SVG viewport radius
+const PLAYER_RADIUS = 25;  // Player circle radius
+const CENTER_RADIUS = 150; // Center text container radius
+
+// Get player positions in a circle
+const getPositions = () => {
+  const positions = {};
+  const n = Object.keys(game.players).length;
+  Object.keys(game.players).forEach((p, i) => {
+    const angle = (2 * Math.PI * i) / n - Math.PI / 2;
+    positions[p] = {
+      x: RADIUS + RADIUS * 0.6 * Math.cos(angle),
+      y: RADIUS + RADIUS * 0.6 * Math.sin(angle)
+    };
+  });
+  return positions;
+};
+
+// Draw arrow between points with optional color and highlight
+const drawArrow = (x1, y1, x2, y2, color='black', highlight=false) => svg`
+  <defs>
+    <marker id="arrow-${color}" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="${color}"/>
+    </marker>
+  </defs>
+  <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+        stroke="${color}" stroke-width="${highlight ? 3 : 2}"
+        marker-end="url(#arrow-${color})"
+        opacity="${highlight ? 0.8 : 0.4}"/>
+`;
+
+const drawStage = (step) => {
+  const state = game.steps[step];
+  const positions = getPositions();
+
+  // Helper to get model name from player ID
+  const getModelName = id => {
+    if (!id) return '';
+    const match = id.match(/Player(\d+)/);
+    return match ? game.players[`P${match[1]}`].model : '';
+  };
+
+  // Prepare highlights and arrows based on event type
+  let highlights = [];
+  let arrows = [];
+  let centerText = '';
+
+  switch (state.event.type) {
+    case 'conversation': {
+      const match = state.event.player_id.match(/Player(\d+)/);
+      if (match) {
+        const p = `P${match[1]}`;
+        const pos = positions[p];
+        highlights.push(svg`
+          <circle cx="${pos.x}" cy="${pos.y}" r="${PLAYER_RADIUS * 2.5}"
+                  fill="white" opacity="0.2"/>
+        `);
+      }
+      centerText = state.event.message;
+      break;
+    }
+    case 'private': {
+      const [sp, tp] = [state.event.speaker_id, state.event.target_id].map(id => {
+        const match = id.match(/Player(\d+)/);
+        return match ? `P${match[1]}` : null;
+      });
+      if (sp && tp) {
+        const s = positions[sp], t = positions[tp];
+        arrows.push(drawArrow(s.x, s.y, t.x, t.y, 'black', true));
+        highlights.push(svg`
+          <circle cx="${s.x}" cy="${s.y}" r="${PLAYER_RADIUS * 2.5}"
+                  fill="white" opacity="0.2"/>
+        `);
+      }
+      centerText = state.event.message;
+      break;
+    }
+    case 'preference_proposal': {
+      const [s, t] = [positions[state.event.proposer], positions[state.event.target]];
+      arrows.push(drawArrow(s.x, s.y, t.x, t.y, '#ffd700', true));
+      centerText = `${getModelName(game.players[state.event.proposer].id)} proposes to ${getModelName(game.players[state.event.target].id)}`;
+      break;
+    }
+    case 'preference_outcome': {
+      const pos = positions[state.event.target];
+      if (state.event.rejected) {
+        const rpos = positions[state.event.rejected];
+        arrows.push(drawArrow(pos.x, pos.y, rpos.x, rpos.y, 'red', true));
+        centerText = `${getModelName(game.players[state.event.target].id)} rejects ${getModelName(game.players[state.event.rejected].id)}`;
+      } else {
+        const apos = positions[state.event.accepted];
+        arrows.push(drawArrow(pos.x, pos.y, apos.x, apos.y, 'green', true));
+        if (state.event.replaced) {
+          const rpos = positions[state.event.replaced];
+          arrows.push(drawArrow(pos.x, pos.y, rpos.x, rpos.y, 'red', true));
+          centerText = `${getModelName(game.players[state.event.target].id)} accepts ${getModelName(game.players[state.event.accepted].id)} replacing ${getModelName(game.players[state.event.replaced].id)}`;
+        } else {
+          centerText = `${getModelName(game.players[state.event.target].id)} accepts ${getModelName(game.players[state.event.accepted].id)}`;
+        }
+      }
+      break;
+    }
+    case 'preference_result':
+      centerText = 'Alliances formed';
+      break;
+    case 'private_vote_reason':
+    case 'private_revote_reason':
+    case 'private_jury_reason':
+    case 'vote': {
+      const [sp, tp] = [state.event.voter_id, state.event.target_id].map(id => {
+        const match = id?.match(/Player(\d+)/);
+        return match ? `P${match[1]}` : null;
+      });
+      if (sp && tp) {
+        const s = positions[sp], t = positions[tp];
+        arrows.push(drawArrow(s.x, s.y, t.x, t.y, 'purple', true));
+      }
+      centerText = state.event.type.includes('reason') ?
+        `${getModelName(state.event.voter_id)} thinks to eliminate ${getModelName(state.event.target_id)}: ${state.event.reason}` :
+        `${getModelName(state.event.voter_id)} voted against ${getModelName(state.event.target_id)}`;
+      break;
+    }
+    case 'elimination':
+      centerText = 'Elimination starts';
+      break;
+    case 'final_results':
+      centerText = `Winners: ${state.event.winners.map(w => getModelName(w)).join(', ')}`;
+      break;
+  }
+
+  return html`
+    <svg viewBox="0 0 ${RADIUS * 2} ${RADIUS * 2}" class="w-100 h-100" width="1000">
+      ${highlights}
+      ${arrows}
+
+      <!-- Draw players -->
+      ${Object.entries(game.players).map(([p, data]) => {
+        const pos = positions[p];
+        const opacity = state.eliminated[p] ? 0.2 : 1;
+        return svg`
+          <g opacity="${opacity}">
+            <circle cx="${pos.x}" cy="${pos.y}" r="${PLAYER_RADIUS}"
+                    fill="${colors[p]}"/>
+            <text x="${pos.x}" y="${pos.y}"
+                  text-anchor="middle" dominant-baseline="middle"
+                  fill="white" font-size="${PLAYER_RADIUS}">
+              ${p.slice(1)}
+            </text>
+            <text x="${pos.x}" y="${pos.y - PLAYER_RADIUS - 5}"
+                  text-anchor="middle" fill="currentColor"
+                  font-size="12">
+              ${data.model}
+            </text>
+          </g>
+        `;
+      })}
+
+      <!-- Center text -->
+      <foreignObject x="${RADIUS - CENTER_RADIUS}" y="${RADIUS - CENTER_RADIUS}"
+                     width="${CENTER_RADIUS * 2}" height="${CENTER_RADIUS * 2}">
+        <div xmlns="http://www.w3.org/1999/xhtml"
+             class="d-flex align-items-center justify-content-center h-100 p-4"
+             style="background: rgba(var(--bs-body-color-rgb), 0.1); border-radius: 1rem; font-size: 0.7rem;">
+          <div class="text-center">${centerText}</div>
+        </div>
+      </foreignObject>
+    </svg>
+  `;
+};
 
 const badge = (player) => html`
   <span class="badge"
@@ -249,7 +420,7 @@ const redraw = step => {
   document.getElementById('stageVal').className = `fs-4 fw-bold badge ${stage.class}`;
   document.getElementById('playersVal').textContent = activePlayers;
 
-  render(html`Step ${step}`, document.getElementById('step'));
+  render(drawStage(step), document.getElementById('step'));
   render(table(step, 'alliances'), document.getElementById('alliancesSection').querySelector('.accordion-body'));
   render(table(step, 'votes'), document.getElementById('eliminationsSection').querySelector('.accordion-body'));
 
