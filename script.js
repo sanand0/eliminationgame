@@ -99,6 +99,7 @@ const loadGame = async (filename) => {
       };
     })
   };
+  console.log(game);
   const slider = document.getElementById('timelineScrubber');
   slider.max = game.steps.length - 1;
   slider.value = 1;
@@ -116,29 +117,83 @@ const colors = {
   P8: '#9A6324'  // Brown
 };
 
-const drawBadge = (player, mini=false) =>
-  player ? `<span class="badge" style="background-color:${colors[player]}">${player.slice(1)}</span>` : '';
+import { render, html } from "https://cdn.jsdelivr.net/npm/lit-html@3/+esm";
 
-const drawTable = (title, step, type) => {
+const badge = (player) => html`
+  <span class="badge" style="background-color:${colors[player]}">${player?.slice(1)}</span>
+`;
+
+const playerBadge = (playerId) => {
+  if (!playerId || !game) return '';
+  const match = playerId.match(/Player(\d+)/);
+  return match ? badge(`P${match[1]}`) : '';
+};
+
+const chatMessage = (event) => {
+  switch (event.type) {
+    case 'conversation':
+      return html`<div class="d-flex gap-2 mb-2">
+        ${playerBadge(event.player_id)} <div>${event.message}</div>
+      </div>`;
+    case 'private':
+      return html`<div class="d-flex gap-2 mb-2 bg-danger-subtle rounded p-2">
+        ${playerBadge(event.speaker_id)} 🢂 ${playerBadge(event.target_id)} <div>${event.message}</div>
+      </div>`;
+    case 'preference_proposal':
+      return html`<div class="d-flex gap-2 mb-2">
+        ${badge(event.proposer)} 😍 ${badge(event.target)} #${event.rank_of_target}
+      </div>`;
+    case 'preference_outcome':
+      return html`<div class="d-flex gap-2 mb-2">
+        ${badge(event.target)}
+        ${event.rejected ? html`❌ ${badge(event.rejected)}` :
+          html`❤️ ${badge(event.accepted)} ${event.replaced ? html`❌ ${badge(event.replaced)}` : ''}`}
+      </div>`;
+    case 'preference_result':
+      return html`<div class="text-muted small mb-2">Alliances formed</div>`;
+    case 'private_vote_reason':
+    case 'private_revote_reason':
+    case 'private_jury_reason':
+      return html`<div class="d-flex gap-2 mb-2 bg-warning-subtle rounded p-2">
+        ${playerBadge(event.voter_id)} 👎 ${playerBadge(event.target_id)} <div>${event.reason}</div>
+      </div>`;
+    case 'vote':
+      return html`<div class="d-flex gap-2 mb-2">
+        ${playerBadge(event.voter_id)} 👎 ${playerBadge(event.target_id)}
+      </div>`;
+    case 'elimination':
+      return html`<div class="text-muted small mb-2">Elimination starts</div>`;
+    case 'final_results':
+      return html`<div class="d-flex gap-2 mb-2">
+        Winners: ${event.winners.map(w => playerBadge(w))}
+      </div>`;
+  }
+};
+
+const tableRow = (round, data, eliminated) => html`
+  <tr>
+    <td>${round}</td>
+    ${Object.keys(colors).map(p => html`
+      <td class="${eliminated[p] < round ? 'bg-secondary bg-opacity-25' : ''}">${badge(data[p])}</td>
+    `)}
+  </tr>
+`;
+
+const table = (step, type) => {
   const data = game.steps[step][type];
   if (!data?.length) return '';
 
-  return `
+  return html`
     <div class="table-responsive">
       <table class="table table-sm mb-0">
-        <thead><tr>
-          <th>Round</th>
-          ${Object.keys(colors).map(p => `<th>${drawBadge(p)}</th>`).join('')}
-        </tr></thead>
+        <thead>
+          <tr>
+            <th>Round</th>
+            ${Object.keys(colors).map(p => html`<th>${badge(p)}</th>`)}
+          </tr>
+        </thead>
         <tbody>
-          ${data.map((row, i) => `
-            <tr>
-              <td>${i + 1}</td>
-              ${Object.keys(colors).map(p => `
-                <td class="${game.steps[step].eliminated[p] < i + 1 ? 'bg-secondary bg-opacity-25' : ''}">${drawBadge(row[p])}</td>
-              `).join('')}
-            </tr>
-          `).join('')}
+          ${data.map((row, i) => tableRow(i + 1, row, game.steps[step].eliminated))}
         </tbody>
       </table>
     </div>
@@ -156,11 +211,17 @@ const updateHash = (filename, step) => {
 const handleHashChange = () => redraw(+new URLSearchParams(location.hash.slice(2)).get("step") || 1);
 
 const redraw = step => {
-  document.getElementById('step').textContent = `Step ${step}`;
-  document.getElementById('alliancesSection').querySelector('.accordion-body').innerHTML =
-    drawTable('Alliances', step, 'alliances');
-  document.getElementById('eliminationsSection').querySelector('.accordion-body').innerHTML =
-    drawTable('Eliminations', step, 'votes');
+  render(html`Step ${step}`, document.getElementById('step'));
+  render(table(step, 'alliances'), document.getElementById('alliancesSection').querySelector('.accordion-body'));
+  render(table(step, 'votes'), document.getElementById('eliminationsSection').querySelector('.accordion-body'));
+
+  // Render chat history up to current step
+  const chatHistory = game.steps.slice(0, step + 1).map(s => chatMessage(s.event));
+  render(html`
+    <div style="max-height: 15em; overflow-y: auto">
+      ${chatHistory}
+    </div>
+  `, document.getElementById('chatSection').querySelector('.accordion-body'));
 };
 
 const init = async () => {

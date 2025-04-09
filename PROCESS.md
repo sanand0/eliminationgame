@@ -272,3 +272,33 @@ color the cells grey only if the player was eliminated BEFORE that round.
 Again, nearly perfect. I made one manual correction:
 
 1. Replace `game.steps[step].eliminated[p] <= i + 1` with `game.steps[step].eliminated[p] < i + 1`
+
+## Show conversation history
+
+```
+For each step, based on `step[].event.type`, populate the Chat section with the history of conversations so far:
+
+- conversation: This is a public conversation. Show `${event.player_id} ${event.message}` with the player ID shown like the badge above. player_id needs to be looked up from game.players since it matches game.players[*].id.
+- private: This is a private conversation. Show `${event.speaker_id} 🢂 ${event.target_id} ${event.message}` with the speaker and target IDs treated as above.
+- preference_proposal: This is an alliance proposal. Show `${event.proposer} 😍 ${event.target} #${event.rank_of_target}`. proposer and target are like "P1", "P2", etc.
+- preference_outcome: This is the outcome of a proposal. Show `${event.target} ❌ ${event.rejected}` if event.rejected else `${event.target} ❤️ ${event.accepted} ❌ ${event.replaced}` if event.replaced else `${event.target} ❤️ ${event.accepted}`. All these are like "P1", "P2", etc.
+- preference_result: This is the outcome of the entire proposal round. Just show "Alliances formed"
+- private_vote_reason: This is the reason a player gives to eliminate someone. Show `${event.voter_id} 👎 ${event.target_id} ${event.reason}`. voter_id and target_id match game.players[*].id
+- private_revote_reason: Show Same as above
+- private_jury_reason: Show same as above.
+- vote: This is the actual vote. Show `${event.voter_id} 👎 ${event.target_id}` like above
+- elimination: Just show "Elimination starts"
+- final_results: Show `Winners: ${winners}` where winners is a list of players like ["P5"]
+
+ALL players should be shown as a colored badge with a number.
+The chat card height should not exceed 15em. Overflow should scroll beyond that.
+Make sure the chat rendering is _elegant_. I've mentioned the content, but please use any Bootstrap UI component to make the chat more attractive.
+
+Use lit-html to render efficiently. Import it via:
+
+import { render, html } from "https://cdn.jsdelivr.net/npm/lit-html@3/+esm";
+
+Rewrite existing code inside redraw(), drawTable, drawBadge to use lit-html.
+```
+
+This worked perfectly.
