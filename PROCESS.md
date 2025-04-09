@@ -422,3 +422,20 @@ This nearly worked. I made to UI edits:
 At this point, we're nearly there!
 
 ![Screenshot](img/render-the-stage.webp)
+
+## Correct UI errors
+
+```
+- The model name may contain underscores. So use everything after the second underscore,
+  then replace all underscores with hyphens.
+- Render eliminated players with an opacity of 0.05, not 0.2.
+- Move the arrow head to the center of the arrow, not the end, to avoid getting hidden by the player circles.
+- Center all cells in the alliances and voting tables.
+- When the page is loaded, check the step as well and render that step.
+- Clicking on any chat entry should change the URL #?step= to that entry's step
+```
+
+That worked well. I made a few manual edits:
+
+1. Fix winner formatting by replacing `getModelName(w)` with `game.players[w].model` and `playerBadge(w)` with `badge(w)`
+2. Setting the step on page load in the UI: `document.getElementById("timelineScrubber").value = step;`

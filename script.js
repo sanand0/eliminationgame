@@ -37,7 +37,7 @@ const loadGame = async (filename) => {
   lines.filter(l => l.type === 'conversation' && l.round === 1 && l.subround === 1)
     .forEach(l => {
       const player = `P${l.player_id.match(/Player(\d+)/)[1]}`;
-      const model = l.player_id.split('_').pop();
+      const model = l.player_id.split('_').slice(2).join('_').replace(/_/g, '-');
       players[player] = { id: l.player_id, model };
     });
 
@@ -152,18 +152,26 @@ const getPositions = () => {
 };
 
 // Draw arrow between points with optional color and highlight
-const drawArrow = (x1, y1, x2, y2, color='black', highlight=false) => svg`
-  <defs>
-    <marker id="arrow-${color}" viewBox="0 0 10 10" refX="9" refY="5"
-            markerWidth="6" markerHeight="6" orient="auto">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="${color}"/>
-    </marker>
-  </defs>
-  <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
-        stroke="${color}" stroke-width="${highlight ? 3 : 2}"
-        marker-end="url(#arrow-${color})"
-        opacity="${highlight ? 0.8 : 0.4}"/>
-`;
+const drawArrow = (x1, y1, x2, y2, color='black', highlight=false) => {
+  // Calculate midpoint
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  return svg`
+    <defs>
+      <marker id="arrow-${color}" viewBox="0 0 10 10" refX="5" refY="5"
+              markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="${color}"/>
+      </marker>
+    </defs>
+    <line x1="${x1}" y1="${y1}" x2="${mx}" y2="${my}"
+          stroke="${color}" stroke-width="${highlight ? 3 : 2}"
+          marker-end="url(#arrow-${color})"
+          opacity="${highlight ? 0.8 : 0.4}"/>
+    <line x1="${mx}" y1="${my}" x2="${x2}" y2="${y2}"
+          stroke="${color}" stroke-width="${highlight ? 3 : 2}"
+          opacity="${highlight ? 0.8 : 0.4}"/>
+  `;
+};
 
 const drawStage = (step) => {
   const state = game.steps[step];
@@ -180,6 +188,27 @@ const drawStage = (step) => {
   let highlights = [];
   let arrows = [];
   let centerText = '';
+
+  // Add speaker info to centerText
+  const getHeaderText = () => {
+    const e = state.event;
+    switch (e.type) {
+      case 'conversation':
+        return getModelName(e.player_id);
+      case 'private':
+        return `${getModelName(e.speaker_id)} → ${getModelName(e.target_id)}`;
+      case 'preference_proposal':
+      case 'preference_outcome':
+        return getModelName(game.players[e.target].id);
+      case 'private_vote_reason':
+      case 'private_revote_reason':
+      case 'private_jury_reason':
+      case 'vote':
+        return getModelName(e.voter_id);
+      default:
+        return '';
+    }
+  };
 
   switch (state.event.type) {
     case 'conversation': {
@@ -260,7 +289,7 @@ const drawStage = (step) => {
       centerText = 'Elimination starts';
       break;
     case 'final_results':
-      centerText = `Winners: ${state.event.winners.map(w => getModelName(w)).join(', ')}`;
+      centerText = `Winner: ${state.event.winners.map((w) => game.players[w].model).join(", ")}`;
       break;
   }
 
@@ -272,7 +301,7 @@ const drawStage = (step) => {
       <!-- Draw players -->
       ${Object.entries(game.players).map(([p, data]) => {
         const pos = positions[p];
-        const opacity = state.eliminated[p] ? 0.2 : 1;
+        const opacity = state.eliminated[p] ? 0.05 : 1;
         return svg`
           <g opacity="${opacity}">
             <circle cx="${pos.x}" cy="${pos.y}" r="${PLAYER_RADIUS}"
@@ -297,7 +326,10 @@ const drawStage = (step) => {
         <div xmlns="http://www.w3.org/1999/xhtml"
              class="d-flex align-items-center justify-content-center h-100 p-4"
              style="background: rgba(var(--bs-body-color-rgb), 0.1); border-radius: 1rem; font-size: 0.7rem;">
-          <div class="text-center">${centerText}</div>
+          <div class="text-center">
+            ${getHeaderText() ? html`<h6 class="mb-2">${getHeaderText()}</h6>` : ''}
+            ${centerText}
+          </div>
         </div>
       </foreignObject>
     </svg>
@@ -319,7 +351,12 @@ const playerBadge = (playerId) => {
   return match ? badge(`P${match[1]}`) : '';
 };
 
-const chatMessage = (event) => {
+const chatMessage = (event, step) => {
+  const message = html`<div class="d-flex align-items-start gap-2 mb-2 p-2"
+                           role="button"
+                           @click=${() => updateHash(game.game, step)}>
+    // ...existing message content...
+  </div>`;
   switch (event.type) {
     case 'conversation':
       return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
@@ -365,7 +402,7 @@ const chatMessage = (event) => {
       return html`<div class="text-muted small mb-2">Elimination starts</div>`;
     case 'final_results':
       return html`<div class="d-flex gap-2 mb-2">
-        Winners: ${event.winners.map(w => playerBadge(w))}
+        Winners: ${event.winners.map(w => badge(w))}
       </div>`;
   }
 };
@@ -374,7 +411,7 @@ const tableRow = (round, data, eliminated) => html`
   <tr>
     <td class="text-end">${round}</td>
     ${Object.keys(colors).map(p => html`
-      <td class="${eliminated[p] < round ? 'bg-secondary bg-opacity-25' : ''}">${badge(data[p])}</td>
+      <td class="text-center ${eliminated[p] < round ? 'bg-secondary bg-opacity-25' : ''}">${badge(data[p])}</td>
     `)}
   </tr>
 `;
@@ -386,10 +423,10 @@ const table = (step, type) => {
   return html`
     <div class="table-responsive">
       <table class="table table-sm mb-0">
-        <thead>
+        <thead class="table-dark">
           <tr>
             <th class="text-end">#</th>
-            ${Object.keys(colors).map(p => html`<th>${badge(p)}</th>`)}
+            ${Object.keys(colors).map(p => html`<th class="text-center">${badge(p)}</th>`)}
           </tr>
         </thead>
         <tbody>
@@ -462,9 +499,12 @@ const init = async () => {
   window.addEventListener("hashchange", handleHashChange);
 
   const gameFile = new URLSearchParams(location.hash.slice(2)).get("game");
+  const step = +new URLSearchParams(location.hash.slice(2)).get("step") || 1;
   if (gameFile) {
     select.value = gameFile;
     await loadGame(gameFile);
+    document.getElementById("timelineScrubber").value = step;
+    redraw(step);
   }
 };
 
