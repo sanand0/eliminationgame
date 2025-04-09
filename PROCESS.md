@@ -228,3 +228,31 @@ This worked almost perfectly. I made these edits:
 1. Add `let currentAlliances = {}; let currentVotes = {};` which it forgot in the code.
 2. Re-apply change #2 I made manually in the last iteration (replacing the URL with the GitHub CDN).
    That change was not there in the chat window, Copilot did _not_ pick it up.
+
+## Render alliances and eliminations
+
+```
+There are always 8 players. Pick 8 visually distinct dark colors (i.e. on which white will look good as a foreground) as `colors: {P1: "#...", P2: ...}`.
+
+In the alliances and eliminations cards, draw a table each as follows. The table header is:
+
+| Round | P1 | P2 | P3 | ... | P8 |
+
+Instead of P1, P2, etc. draw a badge with background-color based on `colors` and text as `1` for P1, etc.
+
+`steps[step].alliances` is a list like [{P1: P7, P2: P3, ...}, ...]. Render each row as a list like:
+
+| 1 | P7 | P3 | ... |
+
+The cell contents are badges exactly like the header.
+If a player (e.g. P3) does not have an alliance, i.e. steps[step].alliances[round].P3 is missing, leave it blank.
+If steps[step].active[P3] is false, grey the cell background.
+
+`steps[step].votes` is almost identical, listing the elimination votes. Populate this in the eliminations card.
+
+Reuse code for this. Write VERY concise code. Use Bootstrap classes as much as possible.
+```
+
+This worked perfectly. I manually made one correction to an earlier mistake I noticed:
+
+1. Replace `slider.max = game.steps.length;` with `slider.max = game.steps.length - 1;`

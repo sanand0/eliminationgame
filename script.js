@@ -99,11 +99,50 @@ const loadGame = async (filename) => {
       };
     })
   };
-
   const slider = document.getElementById('timelineScrubber');
-  slider.max = game.steps.length;
+  slider.max = game.steps.length - 1;
   slider.value = 1;
   updateHash(filename, 1);
+};
+
+const colors = {
+  P1: '#e6194B', // Red
+  P2: '#3cb44b', // Green
+  P3: '#4363d8', // Blue
+  P4: '#f58231', // Orange
+  P5: '#911eb4', // Purple
+  P6: '#42d4f4', // Cyan
+  P7: '#f032e6', // Magenta
+  P8: '#9A6324'  // Brown
+};
+
+const drawBadge = (player, mini=false) =>
+  player ? `<span class="badge" style="background-color:${colors[player]}">${player.slice(1)}</span>` : '';
+
+const drawTable = (title, step, type) => {
+  const data = game.steps[step][type];
+  if (!data?.length) return '';
+
+  return `
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr>
+          <th>Round</th>
+          ${Object.keys(colors).map(p => `<th>${drawBadge(p)}</th>`).join('')}
+        </tr></thead>
+        <tbody>
+          ${data.map((row, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              ${Object.keys(colors).map(p => `
+                <td class="${!game.steps[step].active[p] ? 'bg-secondary bg-opacity-25' : ''}">${drawBadge(row[p])}</td>
+              `).join('')}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 };
 
 const updateHash = (filename, step) => {
@@ -116,7 +155,13 @@ const updateHash = (filename, step) => {
 
 const handleHashChange = () => redraw(+new URLSearchParams(location.hash.slice(2)).get("step") || 1);
 
-const redraw = (step) => (document.getElementById("step").textContent = `Step ${step}`);
+const redraw = step => {
+  document.getElementById('step').textContent = `Step ${step}`;
+  document.getElementById('alliancesSection').querySelector('.accordion-body').innerHTML =
+    drawTable('Alliances', step, 'alliances');
+  document.getElementById('eliminationsSection').querySelector('.accordion-body').innerHTML =
+    drawTable('Eliminations', step, 'votes');
+};
 
 const init = async () => {
   const select = document.getElementById("gameSelect");
