@@ -41,8 +41,8 @@ const loadGame = async (filename) => {
       players[player] = { id: l.player_id, model };
     });
 
-  // Track active players and alliance/vote history
-  const active = Object.fromEntries(Object.keys(players).map(p => [p, true]));
+  // Track eliminated players and alliance/vote history
+  const eliminated = {};
   const roundAlliances = [];
   const roundVotes = [];
   let currentRound = 1;
@@ -82,10 +82,10 @@ const loadGame = async (filename) => {
         }
       }
 
-      // Update active players on elimination
+      // Update eliminated players on elimination
       if (event.type === 'elimination') {
-        const eliminated = event.eliminated_player.match(/Player(\d+)/)[1];
-        active[`P${eliminated}`] = false;
+        const player = `P${event.eliminated_player.match(/Player(\d+)/)[1]}`;
+        eliminated[player] = event.round;
       }
 
       return {
@@ -93,7 +93,7 @@ const loadGame = async (filename) => {
         round: event.round || currentRound,
         subround: event.subround || 1,
         event,
-        active: { ...active },
+        eliminated: { ...eliminated },
         alliances: [...roundAlliances],
         votes: [...roundVotes]
       };
@@ -135,7 +135,7 @@ const drawTable = (title, step, type) => {
             <tr>
               <td>${i + 1}</td>
               ${Object.keys(colors).map(p => `
-                <td class="${!game.steps[step].active[p] ? 'bg-secondary bg-opacity-25' : ''}">${drawBadge(row[p])}</td>
+                <td class="${game.steps[step].eliminated[p] < i + 1 ? 'bg-secondary bg-opacity-25' : ''}">${drawBadge(row[p])}</td>
               `).join('')}
             </tr>
           `).join('')}

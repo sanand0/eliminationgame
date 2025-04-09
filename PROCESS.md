@@ -256,3 +256,19 @@ Reuse code for this. Write VERY concise code. Use Bootstrap classes as much as p
 This worked perfectly. I manually made one correction to an earlier mistake I noticed:
 
 1. Replace `slider.max = game.steps.length;` with `slider.max = game.steps.length - 1;`
+
+## Show eliminated players clearly
+
+```
+Replace the `active` data structure with `eliminated`.
+eliminated["P1"] = 3 if P1 was eliminated at the end of round 3.
+eliminated["P1"] is undefined if P1 is not eliminated.
+
+Using this, in the alliances and elimination tables,
+color the cells grey only if the player was eliminated BEFORE that round.
+(We'll find that only empty cells will be colored grey.)
+```
+
+Again, nearly perfect. I made one manual correction:
+
+1. Replace `game.steps[step].eliminated[p] <= i + 1` with `game.steps[step].eliminated[p] < i + 1`
