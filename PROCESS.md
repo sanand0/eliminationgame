@@ -257,6 +257,8 @@ This worked perfectly. I manually made one correction to an earlier mistake I no
 
 1. Replace `slider.max = game.steps.length;` with `slider.max = game.steps.length - 1;`
 
+![Screenshot](img/render-alliances-and-eliminations.webp)
+
 ## Show eliminated players clearly
 
 ```
@@ -272,6 +274,8 @@ color the cells grey only if the player was eliminated BEFORE that round.
 Again, nearly perfect. I made one manual correction:
 
 1. Replace `game.steps[step].eliminated[p] <= i + 1` with `game.steps[step].eliminated[p] < i + 1`
+
+![Screenshot](img/show-eliminated-players-clearly.webp)
 
 ## Show conversation history
 
@@ -301,4 +305,75 @@ import { render, html } from "https://cdn.jsdelivr.net/npm/lit-html@3/+esm";
 Rewrite existing code inside redraw(), drawTable, drawBadge to use lit-html.
 ```
 
-This worked perfectly.
+This worked perfectly. (Note: I had manually added a `console.log()` to debug. I'll remove that later.)
+
+![Screenshot](img/show-conversation-history.webp)
+
+## Improve UI
+
+```
+- Right align the "Round" column numbers in the alliances and eliminations tables.
+- Change the "Round" header to "#"
+- When the slider (step) changes, change the round, stage and players based on the current round, stage, and number of active players.
+  - Set the stage based on steps[].event.type (picking unique light colors for each)
+    - conversation: "Public chat"
+    - private: "Private chat"
+    - preference_*: "Alliances"
+    - private_vote_reason, private_revote_reason, private_jury_reason, vote: "Voting"
+    - elimination: "Elimination"
+    - final_results: "Done"
+  - Set the number of active players using steps[].elininated
+- Keep the sidebar sections for chat, alliances and eliminations open by default.
+- Rename the eliminations card section title to "Voting"
+- Hovering on the player should show the game.players[P1/P2/...].model as a Bootstrap tooltip WHEREVER players are displayed.
+- Add Bootstrap tooltips around the chats that contain just emojis and players:
+  - 😍: ${event.proposer} proposed to ${event.target} (preference rank #${event.rank_of_target})
+  - ❌: ${event.target} rejected ${event.rejected}
+  - ❤️: ${event.target} accepted proposal from ${event.accepted}
+  - ❤️❌: ${event.target} accepted proposal from ${event.accepted} replacing ${event.replaced}`
+  - 👎: ${event.voter_id} eliminated ${event.target_id}
+- Don't indent or highlight the vote_reason or private conversation chats.
+- I think you can beautify the chat section further.
+```
+
+This messed up the UI because it couldn't figure out the elements. So I made a few changes after 5 failed attempts:
+
+```
+Update index.html and script.js to modify the navbar as follows:
+
+- Add an id= to the round, stage, and players' values
+- When the slider (step) changes, change the round, stage and players based on the current round, stage, and number of active players.
+  - Set the stage based on steps[].event.type (picking unique light colors for each)
+    - conversation: "Public chat"
+    - private: "Private chat"
+    - preference_*: "Alliances"
+    - private_vote_reason, private_revote_reason, private_jury_reason, vote: "Voting"
+    - elimination: "Elimination"
+    - final_results: "Done"
+  - Set the number of active players using len(game.players) - len(game.steps[].eliminated)
+```
+
+This worked perfectly. Then:
+
+```
+Update index.html and script.js to modify the sidebar as follows:
+
+- Keep the sidebar sections for chat, alliances and eliminations open by default.
+- Right align the "Round" column numbers in the alliances and eliminations tables.
+- Change the "Round" header to "#"
+- Rename the eliminations card section title to "Voting"
+- EVERY player badge should show game.players[P1/P2/...].model as a Bootstrap tooltip.
+- Add Bootstrap tooltips for the emojis
+  - 😍: proposed to
+  - ❌: rejected
+  - ❤️: accepted
+  - 👎: eliminated
+- Don't indent or shade the chats that are currently indented and shaded (e.g. vote_reason).
+- If possible, beautify the chats further using Bootstrap classes.
+```
+
+This worked perfectly too.
+
+**NOTE**: This was after _5 failed attempts_ in which I had combined these changes into 1 prompt.
+
+![Screenshot](img/improve-ui.webp)

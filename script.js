@@ -117,10 +117,29 @@ const colors = {
   P8: '#9A6324'  // Brown
 };
 
+const stages = {
+  conversation: { text: "Public chat", class: "text-bg-success" },
+  private: { text: "Private chat", class: "text-bg-info" },
+  preference_proposal: { text: "Alliances", class: "text-bg-warning" },
+  preference_outcome: { text: "Alliances", class: "text-bg-warning" },
+  preference_result: { text: "Alliances", class: "text-bg-warning" },
+  private_vote_reason: { text: "Voting", class: "text-bg-danger" },
+  private_revote_reason: { text: "Voting", class: "text-bg-danger" },
+  private_jury_reason: { text: "Voting", class: "text-bg-danger" },
+  vote: { text: "Voting", class: "text-bg-danger" },
+  elimination: { text: "Elimination", class: "text-bg-secondary" },
+  final_results: { text: "Done", class: "text-bg-dark" }
+};
+
 import { render, html } from "https://cdn.jsdelivr.net/npm/lit-html@3/+esm";
 
 const badge = (player) => html`
-  <span class="badge" style="background-color:${colors[player]}">${player?.slice(1)}</span>
+  <span class="badge"
+        style="background-color:${colors[player]}"
+        data-bs-toggle="tooltip"
+        title="${game.players[player]?.model}">
+    ${player?.slice(1)}
+  </span>
 `;
 
 const playerBadge = (playerId) => {
@@ -132,30 +151,40 @@ const playerBadge = (playerId) => {
 const chatMessage = (event) => {
   switch (event.type) {
     case 'conversation':
-      return html`<div class="d-flex gap-2 mb-2">
-        ${playerBadge(event.player_id)} <div>${event.message}</div>
+      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
+        ${playerBadge(event.player_id)} <div class="text-break">${event.message}</div>
       </div>`;
     case 'private':
-      return html`<div class="d-flex gap-2 mb-2 bg-danger-subtle rounded p-2">
-        ${playerBadge(event.speaker_id)} 🢂 ${playerBadge(event.target_id)} <div>${event.message}</div>
+      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
+        ${playerBadge(event.speaker_id)}
+        <span data-bs-toggle="tooltip" title="private message to">🢂</span>
+        ${playerBadge(event.target_id)}
+        <div class="text-break">${event.message}</div>
       </div>`;
     case 'preference_proposal':
-      return html`<div class="d-flex gap-2 mb-2">
-        ${badge(event.proposer)} 😍 ${badge(event.target)} #${event.rank_of_target}
+      return html`<div class="d-flex align-items-center gap-2 mb-2 p-2">
+        ${badge(event.proposer)}
+        <span data-bs-toggle="tooltip" title="proposed to">😍</span>
+        ${badge(event.target)} #${event.rank_of_target}
       </div>`;
     case 'preference_outcome':
-      return html`<div class="d-flex gap-2 mb-2">
+      return html`<div class="d-flex align-items-center gap-2 mb-2 p-2">
         ${badge(event.target)}
-        ${event.rejected ? html`❌ ${badge(event.rejected)}` :
-          html`❤️ ${badge(event.accepted)} ${event.replaced ? html`❌ ${badge(event.replaced)}` : ''}`}
+        ${event.rejected ?
+          html`<span data-bs-toggle="tooltip" title="rejected">❌</span> ${badge(event.rejected)}` :
+          html`<span data-bs-toggle="tooltip" title="accepted">❤️</span> ${badge(event.accepted)}
+               ${event.replaced ? html`<span data-bs-toggle="tooltip" title="replaced">❌</span> ${badge(event.replaced)}` : ''}`}
       </div>`;
     case 'preference_result':
       return html`<div class="text-muted small mb-2">Alliances formed</div>`;
     case 'private_vote_reason':
     case 'private_revote_reason':
     case 'private_jury_reason':
-      return html`<div class="d-flex gap-2 mb-2 bg-warning-subtle rounded p-2">
-        ${playerBadge(event.voter_id)} 👎 ${playerBadge(event.target_id)} <div>${event.reason}</div>
+      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
+        ${playerBadge(event.voter_id)}
+        <span data-bs-toggle="tooltip" title="voted to eliminate">👎</span>
+        ${playerBadge(event.target_id)}
+        <div class="text-break">${event.reason}</div>
       </div>`;
     case 'vote':
       return html`<div class="d-flex gap-2 mb-2">
@@ -172,7 +201,7 @@ const chatMessage = (event) => {
 
 const tableRow = (round, data, eliminated) => html`
   <tr>
-    <td>${round}</td>
+    <td class="text-end">${round}</td>
     ${Object.keys(colors).map(p => html`
       <td class="${eliminated[p] < round ? 'bg-secondary bg-opacity-25' : ''}">${badge(data[p])}</td>
     `)}
@@ -188,7 +217,7 @@ const table = (step, type) => {
       <table class="table table-sm mb-0">
         <thead>
           <tr>
-            <th>Round</th>
+            <th class="text-end">#</th>
             ${Object.keys(colors).map(p => html`<th>${badge(p)}</th>`)}
           </tr>
         </thead>
@@ -211,17 +240,30 @@ const updateHash = (filename, step) => {
 const handleHashChange = () => redraw(+new URLSearchParams(location.hash.slice(2)).get("step") || 1);
 
 const redraw = step => {
+  const state = game.steps[step];
+  const stage = stages[state.event.type];
+  const activePlayers = Object.keys(game.players).length - Object.keys(state.eliminated).length;
+
+  document.getElementById('roundVal').textContent = state.round;
+  document.getElementById('stageVal').textContent = stage.text;
+  document.getElementById('stageVal').className = `fs-4 fw-bold badge ${stage.class}`;
+  document.getElementById('playersVal').textContent = activePlayers;
+
   render(html`Step ${step}`, document.getElementById('step'));
   render(table(step, 'alliances'), document.getElementById('alliancesSection').querySelector('.accordion-body'));
   render(table(step, 'votes'), document.getElementById('eliminationsSection').querySelector('.accordion-body'));
 
-  // Render chat history up to current step
   const chatHistory = game.steps.slice(0, step + 1).map(s => chatMessage(s.event));
   render(html`
-    <div style="max-height: 15em; overflow-y: auto">
+    <div style="max-height: 15em; overflow-y: auto" class="pe-2">
       ${chatHistory}
     </div>
   `, document.getElementById('chatSection').querySelector('.accordion-body'));
+
+  // Initialize tooltips
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el =>
+    new bootstrap.Tooltip(el, { placement: 'top' })
+  );
 };
 
 const init = async () => {
