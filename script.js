@@ -156,22 +156,23 @@ const getPositions = () => {
 
 // Draw arrow between points with optional color and highlight
 const drawArrow = (x1, y1, x2, y2, color = "black", highlight = false) => {
+  const id = `arrow-${color}`.replace(/[^a-zA-Z0-9-]/g, "-");
   // Calculate midpoint
   const mx = (x1 + x2) / 2;
   const my = (y1 + y2) / 2;
   return svg`
     <defs>
-      <marker id="arrow-${color}" viewBox="0 0 10 10" refX="5" refY="5"
+      <marker id="${id}" viewBox="0 0 10 10" refX="5" refY="5"
               markerWidth="6" markerHeight="6" orient="auto">
         <path d="M 0 0 L 10 5 L 0 10 z" fill="${color}"/>
       </marker>
     </defs>
     <line x1="${x1}" y1="${y1}" x2="${mx}" y2="${my}"
-          stroke="${color}" stroke-width="${highlight ? 3 : 2}"
-          marker-end="url(#arrow-${color})"
+          stroke="${color}" stroke-width="${highlight ? 3 : 1}"
+          marker-end="url(#${id})"
           opacity="${highlight ? 0.8 : 0.4}"/>
     <line x1="${mx}" y1="${my}" x2="${x2}" y2="${y2}"
-          stroke="${color}" stroke-width="${highlight ? 3 : 2}"
+          stroke="${color}" stroke-width="${highlight ? 3 : 1}"
           opacity="${highlight ? 0.8 : 0.4}"/>
   `;
 };
@@ -195,9 +196,7 @@ const drawStage = (step) => {
   Object.entries(currentAlliances).forEach(([from, to]) => {
     const f = positions[from];
     const t = positions[to];
-    if (f && t) {
-      backgroundArrows.push(drawArrow(f.x, f.y, t.x, t.y, "green", false));
-    }
+    if (f && t) backgroundArrows.push(drawArrow(f.x, f.y, t.x, t.y, "rgba(0, 128, 0, 0.5)", false));
   });
 
   // Draw votes
@@ -205,9 +204,7 @@ const drawStage = (step) => {
   Object.entries(currentVotes).forEach(([from, to]) => {
     const f = positions[from];
     const t = positions[`P${to}`];
-    if (f && t) {
-      backgroundArrows.push(drawArrow(f.x, f.y, t.x, t.y, "red", false));
-    }
+    if (f && t) backgroundArrows.push(drawArrow(f.x, f.y, t.x, t.y, "red", false));
   });
 
   // Prepare highlights and arrows based on event type
@@ -247,7 +244,7 @@ const drawStage = (step) => {
         const pos = positions[p];
         highlights.push(svg`
           <circle cx="${pos.x}" cy="${pos.y}" r="${PLAYER_RADIUS * 2.5}"
-                  fill="white" opacity="0.2"/>
+                  fill="var(--bs-body-color)" opacity="0.2"/>
         `);
       }
       centerText = state.event.message;
@@ -261,10 +258,10 @@ const drawStage = (step) => {
       if (sp && tp) {
         const s = positions[sp],
           t = positions[tp];
-        arrows.push(drawArrow(s.x, s.y, t.x, t.y, "black", true));
+        arrows.push(drawArrow(s.x, s.y, t.x, t.y, "#666666", true));
         highlights.push(svg`
           <circle cx="${s.x}" cy="${s.y}" r="${PLAYER_RADIUS * 2.5}"
-                  fill="white" opacity="0.2"/>
+                  fill="var(--bs-body-color)" opacity="0.2"/>
         `);
       }
       centerText = state.event.message;
