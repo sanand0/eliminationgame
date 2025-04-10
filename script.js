@@ -92,6 +92,11 @@ const loadGame = async (filename) => {
         eliminated[player] = event.round;
       }
 
+      // Update eliminated players after jury round
+      if (event.type == "final_results")
+        for (const player in players)
+          if (event.winners.indexOf(players[player].id) < 0) eliminated[player] = eliminated[player] ?? currentRound;
+
       return {
         step,
         round: event.round || currentRound,
