@@ -22,11 +22,16 @@
       border-radius: 8px;
     }
 
+    tr[data-round] td {
+      cursor: pointer;
+    }
+
     .conversation {
       background: rgba(var(--bs-body-color-rgb), 0.1);
       border-radius: 1rem;
       font-size: 0.7rem;
     }
+
     .conversation:hover {
       background: rgba(var(--bs-body-color-rgb), 0.9);
       color: var(--bs-body-bg);
@@ -97,7 +102,7 @@
           </div>
         </div>
       </div>
-      <div class="col-lg-4">
+      <div class="col-lg-4" id="sidebar">
         <div class="accordion">
           <div class="accordion-item">
             <h2 class="accordion-header">

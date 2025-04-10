@@ -454,7 +454,7 @@ const chatMessage = (event, step) => {
 };
 
 const tableRow = (round, data, eliminated) => html`
-  <tr>
+  <tr data-round="${round}">
     <td class="text-end">${round}</td>
     ${Object.keys(colors).map(
       (p) => html`
@@ -470,7 +470,7 @@ const table = (step, type) => {
 
   return html`
     <div class="table-responsive">
-      <table class="table table-sm mb-0">
+      <table class="table table-sm table-hover mb-0">
         <thead class="table-dark">
           <tr>
             <th class="text-end">#</th>
@@ -520,6 +520,19 @@ const redraw = (step) => {
     .querySelectorAll('[data-bs-toggle="tooltip"]')
     .forEach((el) => new bootstrap.Tooltip(el, { placement: "top" }));
 };
+
+document.getElementById("sidebar").addEventListener("click", function (e) {
+  const row = e.target.closest("[data-round]");
+  if (row) {
+    const round = +row.dataset.round;
+    const stepNode = game.steps.find(step => step.round == round);
+    if (stepNode) {
+      document.getElementById("timelineScrubber").value = stepNode.step;
+      updateHash(game.game, stepNode.step);
+      document.querySelector(".tooltip")?.remove?.();
+    }
+  }
+})
 
 const init = async () => {
   const select = document.getElementById("gameSelect");
