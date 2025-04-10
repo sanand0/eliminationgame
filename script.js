@@ -395,34 +395,27 @@ const playerBadge = (playerId) => {
 };
 
 const chatMessage = (event, step) => {
-  const message = html`<div
-    class="d-flex align-items-start gap-2 mb-2 p-2"
-    role="button"
-    @click=${() => updateHash(game.game, step)}
-  >
-    // ...existing message content...
-  </div>`;
   switch (event.type) {
     case "conversation":
-      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
+      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2" data-step="${step}">
         ${playerBadge(event.player_id)}
         <div class="text-break">${event.message}</div>
       </div>`;
     case "private":
-      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
+      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2" data-step="${step}">
         ${playerBadge(event.speaker_id)}
         <span data-bs-toggle="tooltip" title="private message to">🢂</span>
         ${playerBadge(event.target_id)}
         <div class="text-break">${event.message}</div>
       </div>`;
     case "preference_proposal":
-      return html`<div class="d-flex align-items-center gap-2 mb-2 p-2">
+      return html`<div class="d-flex align-items-center gap-2 mb-2 p-2" data-step="${step}">
         ${badge(event.proposer)}
         <span data-bs-toggle="tooltip" title="proposed to">😍</span>
         ${badge(event.target)} #${event.rank_of_target}
       </div>`;
     case "preference_outcome":
-      return html`<div class="d-flex align-items-center gap-2 mb-2 p-2">
+      return html`<div class="d-flex align-items-center gap-2 mb-2 p-2" data-step="${step}">
         ${badge(event.target)}
         ${event.rejected
           ? html`<span data-bs-toggle="tooltip" title="rejected">❌</span> ${badge(event.rejected)}`
@@ -432,24 +425,26 @@ const chatMessage = (event, step) => {
                 : ""}`}
       </div>`;
     case "preference_result":
-      return html`<div class="text-muted small mb-2">Alliances formed</div>`;
+      return html`<div class="text-muted small mb-2" data-step="${step}">Alliances formed</div>`;
     case "private_vote_reason":
     case "private_revote_reason":
     case "private_jury_reason":
-      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
+      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2" data-step="${step}">
         ${playerBadge(event.voter_id)}
         <span data-bs-toggle="tooltip" title="voted to eliminate">👎</span>
         ${playerBadge(event.target_id)}
         <div class="text-break">${event.reason}</div>
       </div>`;
     case "vote":
-      return html`<div class="d-flex gap-2 mb-2">
+      return html`<div class="d-flex gap-2 mb-2" data-step="${step}">
         ${playerBadge(event.voter_id)} 👎 ${playerBadge(event.target_id)}
       </div>`;
     case "elimination":
-      return html`<div class="text-muted small mb-2">Elimination starts</div>`;
+      return html`<div class="text-muted small mb-2" data-step="${step}">Elimination starts</div>`;
     case "final_results":
-      return html`<div class="d-flex gap-2 mb-2">Winners: ${event.winners.map((w) => badge(w))}</div>`;
+      return html`<div class="d-flex gap-2 mb-2" data-step="${step}">
+        Winners: ${event.winners.map((w) => badge(w))}
+      </div>`;
   }
 };
 
@@ -509,7 +504,7 @@ const redraw = (step) => {
   render(table(step, "alliances"), document.getElementById("alliancesSection").querySelector(".accordion-body"));
   render(table(step, "votes"), document.getElementById("eliminationsSection").querySelector(".accordion-body"));
 
-  const chatHistory = game.steps.slice(0, step + 1).map((s) => chatMessage(s.event));
+  const chatHistory = game.steps.slice(0, step + 1).map((s, index) => chatMessage(s.event, index));
   render(
     html` <div style="max-height: 15em; overflow-y: auto" class="pe-2">${chatHistory}</div> `,
     document.getElementById("chatSection").querySelector(".accordion-body")
@@ -522,17 +517,25 @@ const redraw = (step) => {
 };
 
 document.getElementById("sidebar").addEventListener("click", function (e) {
-  const row = e.target.closest("[data-round]");
-  if (row) {
-    const round = +row.dataset.round;
-    const stepNode = game.steps.find(step => step.round == round);
+  const roundLink = e.target.closest("[data-round]");
+  if (roundLink) {
+    const round = +roundLink.dataset.round;
+    const stepNode = game.steps.find((step) => step.round == round);
     if (stepNode) {
       document.getElementById("timelineScrubber").value = stepNode.step;
       updateHash(game.game, stepNode.step);
       document.querySelector(".tooltip")?.remove?.();
     }
+    return;
   }
-})
+  const stepLink = e.target.closest("[data-step]");
+  if (stepLink) {
+    const step = +stepLink.dataset.step;
+    document.getElementById("timelineScrubber").value = step;
+    updateHash(game.game, step);
+    document.querySelector(".tooltip")?.remove?.();
+  }
+});
 
 const init = async () => {
   const select = document.getElementById("gameSelect");
