@@ -465,3 +465,10 @@ Then I prompted:
 ```
 
 ![Screenshot](img/tweaks.webp)
+
+## Manual edits
+
+I formatted with Prettier, added arrows for alliances, and a few other minor manual changes
+because I'm tired of LLMs.
+
+![Screenshots](img/manual-tweaks.webp)

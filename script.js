@@ -34,10 +34,11 @@ const loadGame = async (filename) => {
 
   // Extract players from first few lines
   const players = {};
-  lines.filter(l => l.type === 'conversation' && l.round === 1 && l.subround === 1)
-    .forEach(l => {
+  lines
+    .filter((l) => l.type === "conversation" && l.round === 1 && l.subround === 1)
+    .forEach((l) => {
       const player = `P${l.player_id.match(/Player(\d+)/)[1]}`;
-      const model = l.player_id.split('_').slice(2).join('_').replace(/_/g, '-');
+      const model = l.player_id.split("_").slice(2).join("_").replace(/_/g, "-");
       players[player] = { id: l.player_id, model };
     });
 
@@ -64,26 +65,27 @@ const loadGame = async (filename) => {
       }
 
       // Track alliances for current round
-      if (event.type === 'preference_result') {
-        event.matched_pairs.forEach(([p1, p2]) => {
-          const p1short = p1.replace('Player', 'P');
-          const p2short = p2.replace('Player', 'P');
-          currentAlliances[p1short] = p2short;
-          currentAlliances[p2short] = p1short;
-        });
-      }
-
-      // Track votes for current round
-      if (event.type === 'vote' && event.public_vote) {
-        const voter = event.voter_id.match(/Player(\d+)/)[1];
-        const target = event.target_id.match(/Player(\d+)/)?.[1];
-        if (target) {
-          currentVotes[`P${voter}`] = `P${target}`;
+      if (event.type === "preference_outcome") {
+        if (event.rejected) {
+          // Do nothing for rejected proposals
+        } else {
+          // Remove replaced player from any existing alliances
+          if (event.replaced) delete currentAlliances[event.replaced];
+          // Add new alliance
+          currentAlliances[event.accepted] = event.target;
+          currentAlliances[event.target] = event.accepted;
         }
       }
 
+      // Track votes for current round
+      if (event.type === "vote" && event.public_vote) {
+        const voter = event.voter_id.match(/Player(\d+)/)[1];
+        const target = event.target_id.match(/Player(\d+)/)?.[1];
+        if (target) currentVotes[`P${voter}`] = `P${target}`;
+      }
+
       // Update eliminated players on elimination
-      if (event.type === 'elimination') {
+      if (event.type === "elimination") {
         const player = `P${event.eliminated_player.match(/Player(\d+)/)[1]}`;
         eliminated[player] = event.round;
       }
@@ -97,23 +99,23 @@ const loadGame = async (filename) => {
         alliances: [...roundAlliances, { ...currentAlliances }],
         votes: [...roundVotes, { ...currentVotes }],
       };
-    })
+    }),
   };
-  const slider = document.getElementById('timelineScrubber');
+  const slider = document.getElementById("timelineScrubber");
   slider.max = game.steps.length - 1;
   slider.value = 0;
   updateHash(filename, slider.value);
 };
 
 const colors = {
-  P1: '#e6194B', // Red
-  P2: '#3cb44b', // Green
-  P3: '#4363d8', // Blue
-  P4: '#f58231', // Orange
-  P5: '#911eb4', // Purple
-  P6: '#42d4f4', // Cyan
-  P7: '#f032e6', // Magenta
-  P8: '#9A6324'  // Brown
+  P1: "#e6194B", // Red
+  P2: "#3cb44b", // Green
+  P3: "#4363d8", // Blue
+  P4: "#f58231", // Orange
+  P5: "#911eb4", // Purple
+  P6: "#42d4f4", // Cyan
+  P7: "#f032e6", // Magenta
+  P8: "#9A6324", // Brown
 };
 
 const stages = {
@@ -127,13 +129,13 @@ const stages = {
   private_jury_reason: { text: "Voting", class: "text-bg-danger" },
   vote: { text: "Voting", class: "text-bg-danger" },
   elimination: { text: "Elimination", class: "text-bg-secondary" },
-  final_results: { text: "Done", class: "text-bg-dark" }
+  final_results: { text: "Done", class: "text-bg-dark" },
 };
 
 import { render, html, svg } from "https://cdn.jsdelivr.net/npm/lit-html@3/+esm";
 
-const RADIUS = 300;        // SVG viewport radius
-const PLAYER_RADIUS = 25;  // Player circle radius
+const RADIUS = 300; // SVG viewport radius
+const PLAYER_RADIUS = 25; // Player circle radius
 const CENTER_RADIUS = 150; // Center text container radius
 
 // Get player positions in a circle
@@ -144,14 +146,14 @@ const getPositions = () => {
     const angle = (2 * Math.PI * i) / n - Math.PI / 2;
     positions[p] = {
       x: RADIUS + RADIUS * 0.6 * Math.cos(angle),
-      y: RADIUS + RADIUS * 0.6 * Math.sin(angle)
+      y: RADIUS + RADIUS * 0.6 * Math.sin(angle),
     };
   });
   return positions;
 };
 
 // Draw arrow between points with optional color and highlight
-const drawArrow = (x1, y1, x2, y2, color='black', highlight=false) => {
+const drawArrow = (x1, y1, x2, y2, color = "black", highlight = false) => {
   // Calculate midpoint
   const mx = (x1 + x2) / 2;
   const my = (y1 + y2) / 2;
@@ -177,51 +179,66 @@ const drawStage = (step) => {
   const positions = getPositions();
 
   // Helper to render model name as badge
-  const modelBadge = id => {
-    if (!id) return '';
+  const modelBadge = (id) => {
+    if (!id) return "";
     const match = id.match(/Player(\d+)/);
-    return match ? badge(`P${match[1]}`) : '';
+    return match ? badge(`P${match[1]}`) : "";
   };
 
-  // Draw background vote arrows
-  const voteArrows = [];
-  const currentVotes = state.votes.at(-1) || {};
-  Object.entries(currentVotes).forEach(([from, to]) => {
+  // Draw background arrows for alliances and votes
+  const backgroundArrows = [];
+
+  // Draw alliances
+  const currentAlliances = state.alliances.at(-1) || {};
+  Object.entries(currentAlliances).forEach(([from, to]) => {
     const f = positions[from];
     const t = positions[to];
     if (f && t) {
-      voteArrows.push(drawArrow(f.x, f.y, t.x, t.y, 'red', false));
+      backgroundArrows.push(drawArrow(f.x, f.y, t.x, t.y, "green", false));
+    }
+  });
+
+  // Draw votes
+  const currentVotes = state.votes.at(-1) || {};
+  Object.entries(currentVotes).forEach(([from, to]) => {
+    const f = positions[from];
+    const t = positions[`P${to}`];
+    if (f && t) {
+      backgroundArrows.push(drawArrow(f.x, f.y, t.x, t.y, "red", false));
     }
   });
 
   // Prepare highlights and arrows based on event type
   let highlights = [];
   let arrows = [];
-  let centerText = '';
+  let centerText = "";
 
   // Add speaker info to centerText
   const getHeaderText = () => {
     const e = state.event;
     switch (e.type) {
-      case 'conversation':
+      case "conversation":
         return modelBadge(e.player_id);
-      case 'private':
-        return html`${modelBadge(e.speaker_id)} → ${modelBadge(e.target_id)}`;
-      case 'preference_proposal':
-      case 'preference_outcome':
-        return modelBadge(game.players[e.target].id);
-      case 'private_vote_reason':
-      case 'private_revote_reason':
-      case 'private_jury_reason':
-      case 'vote':
-        return modelBadge(e.voter_id);
+      case "private":
+        return html`${modelBadge(e.speaker_id)} <i class="bi bi-arrow-right"></i> ${modelBadge(e.target_id)}`;
+      case "preference_proposal":
+        return html`${modelBadge(game.players[e.proposer].id)} 😍 ${modelBadge(game.players[e.target].id)}`;
+      case "preference_outcome":
+        return e.rejected
+          ? html`${modelBadge(game.players[e.target].id)} ❌ ${modelBadge(game.players[e.rejected].id)}`
+          : html`${modelBadge(game.players[e.target].id)} ❤️ ${modelBadge(game.players[e.accepted].id)}`;
+      case "private_vote_reason":
+      case "private_revote_reason":
+      case "private_jury_reason":
+      case "vote":
+        return html`${modelBadge(e.voter_id)} <i class="bi bi-arrow-right text-danger"></i> ${modelBadge(e.target_id)}`;
       default:
-        return '';
+        return "";
     }
   };
 
   switch (state.event.type) {
-    case 'conversation': {
+    case "conversation": {
       const match = state.event.player_id.match(/Player(\d+)/);
       if (match) {
         const p = `P${match[1]}`;
@@ -234,14 +251,15 @@ const drawStage = (step) => {
       centerText = state.event.message;
       break;
     }
-    case 'private': {
-      const [sp, tp] = [state.event.speaker_id, state.event.target_id].map(id => {
+    case "private": {
+      const [sp, tp] = [state.event.speaker_id, state.event.target_id].map((id) => {
         const match = id.match(/Player(\d+)/);
         return match ? `P${match[1]}` : null;
       });
       if (sp && tp) {
-        const s = positions[sp], t = positions[tp];
-        arrows.push(drawArrow(s.x, s.y, t.x, t.y, 'black', true));
+        const s = positions[sp],
+          t = positions[tp];
+        arrows.push(drawArrow(s.x, s.y, t.x, t.y, "black", true));
         highlights.push(svg`
           <circle cx="${s.x}" cy="${s.y}" r="${PLAYER_RADIUS * 2.5}"
                   fill="white" opacity="0.2"/>
@@ -250,64 +268,68 @@ const drawStage = (step) => {
       centerText = state.event.message;
       break;
     }
-    case 'preference_proposal': {
+    case "preference_proposal": {
       const [s, t] = [positions[state.event.proposer], positions[state.event.target]];
-      arrows.push(drawArrow(s.x, s.y, t.x, t.y, '#ffd700', true));
-      centerText = html`${modelBadge(game.players[state.event.proposer].id)} proposes to ${modelBadge(game.players[state.event.target].id)}`;
+      arrows.push(drawArrow(s.x, s.y, t.x, t.y, "#ffd700", true));
+      centerText = html`${modelBadge(game.players[state.event.proposer].id)} proposes to
+      ${modelBadge(game.players[state.event.target].id)}`;
       break;
     }
-    case 'preference_outcome': {
+    case "preference_outcome": {
       const pos = positions[state.event.target];
       if (state.event.rejected) {
         const rpos = positions[state.event.rejected];
-        arrows.push(drawArrow(pos.x, pos.y, rpos.x, rpos.y, 'red', true));
-        centerText = html`${modelBadge(game.players[state.event.target].id)} rejects ${modelBadge(game.players[state.event.rejected].id)}`;
+        arrows.push(drawArrow(pos.x, pos.y, rpos.x, rpos.y, "red", true));
+        centerText = html`${modelBadge(game.players[state.event.target].id)} rejects
+        ${modelBadge(game.players[state.event.rejected].id)}`;
       } else {
         const apos = positions[state.event.accepted];
-        arrows.push(drawArrow(pos.x, pos.y, apos.x, apos.y, 'green', true));
+        arrows.push(drawArrow(pos.x, pos.y, apos.x, apos.y, "green", true));
         if (state.event.replaced) {
           const rpos = positions[state.event.replaced];
-          arrows.push(drawArrow(pos.x, pos.y, rpos.x, rpos.y, 'red', true));
-          centerText = html`${modelBadge(game.players[state.event.target].id)} accepts ${modelBadge(game.players[state.event.accepted].id)} replacing ${modelBadge(game.players[state.event.replaced].id)}`;
+          arrows.push(drawArrow(pos.x, pos.y, rpos.x, rpos.y, "red", true));
+          centerText = html`${modelBadge(game.players[state.event.target].id)} accepts
+          ${modelBadge(game.players[state.event.accepted].id)} replacing
+          ${modelBadge(game.players[state.event.replaced].id)}`;
         } else {
-          centerText = html`${modelBadge(game.players[state.event.target].id)} accepts ${modelBadge(game.players[state.event.accepted].id)}`;
+          centerText = html`${modelBadge(game.players[state.event.target].id)} accepts
+          ${modelBadge(game.players[state.event.accepted].id)}`;
         }
       }
       break;
     }
-    case 'preference_result':
-      centerText = 'Alliances formed';
+    case "preference_result":
+      centerText = "Alliances formed";
       break;
-    case 'private_vote_reason':
-    case 'private_revote_reason':
-    case 'private_jury_reason':
-    case 'vote': {
-      const [sp, tp] = [state.event.voter_id, state.event.target_id].map(id => {
+    case "private_vote_reason":
+    case "private_revote_reason":
+    case "private_jury_reason":
+    case "vote": {
+      const [sp, tp] = [state.event.voter_id, state.event.target_id].map((id) => {
         const match = id?.match(/Player(\d+)/);
         return match ? `P${match[1]}` : null;
       });
       if (sp && tp) {
-        const s = positions[sp], t = positions[tp];
-        arrows.push(drawArrow(s.x, s.y, t.x, t.y, 'red', true));
+        const s = positions[sp],
+          t = positions[tp];
+        arrows.push(drawArrow(s.x, s.y, t.x, t.y, "red", true));
       }
-      centerText = state.event.type.includes('reason') ?
-        html`${modelBadge(state.event.voter_id)} thinks to eliminate ${modelBadge(state.event.target_id)}: ${state.event.reason}` :
-        html`${modelBadge(state.event.voter_id)} voted against ${modelBadge(state.event.target_id)}`;
+      centerText = state.event.type.includes("reason")
+        ? state.event.reason
+        : html`${modelBadge(state.event.voter_id)} voted against ${modelBadge(state.event.target_id)}`;
       break;
     }
-    case 'elimination':
-      centerText = 'Elimination starts';
+    case "elimination":
+      centerText = "Elimination starts";
       break;
-    case 'final_results':
-      centerText = html`Winner: ${state.event.winners.map(w => modelBadge(w))}`;
+    case "final_results":
+      centerText = html`Winner: ${state.event.winners.map((w) => modelBadge(w))}`;
       break;
   }
 
   return html`
     <svg viewBox="0 0 ${RADIUS * 2} ${RADIUS * 2}" class="w-100 h-100" width="1000">
-      ${voteArrows}
-      ${highlights}
-      ${arrows}
+      ${backgroundArrows} ${highlights} ${arrows}
 
       <!-- Draw players -->
       ${Object.entries(game.players).map(([p, data]) => {
@@ -332,14 +354,19 @@ const drawStage = (step) => {
       })}
 
       <!-- Center text -->
-      <foreignObject x="${RADIUS - CENTER_RADIUS}" y="${RADIUS - CENTER_RADIUS}"
-                     width="${CENTER_RADIUS * 2}" height="${CENTER_RADIUS * 2}">
-        <div xmlns="http://www.w3.org/1999/xhtml"
-             class="d-flex align-items-center justify-content-center h-100 p-4"
-             style="background: rgba(var(--bs-body-color-rgb), 0.1); border-radius: 1rem; font-size: 0.7rem;">
+      <foreignObject
+        x="${RADIUS - CENTER_RADIUS}"
+        y="${RADIUS - CENTER_RADIUS}"
+        width="${CENTER_RADIUS * 2}"
+        height="${CENTER_RADIUS * 2}"
+      >
+        <div
+          xmlns="http://www.w3.org/1999/xhtml"
+          class="d-flex align-items-center justify-content-center h-100 p-4"
+          style="background: rgba(var(--bs-body-color-rgb), 0.1); border-radius: 1rem; font-size: 0.7rem;"
+        >
           <div class="text-center">
-            ${getHeaderText() ? html`<h6 class="mb-2">${getHeaderText()}</h6>` : ''}
-            ${centerText}
+            ${getHeaderText() ? html`<h6 class="mb-2">${getHeaderText()}</h6>` : ""} ${centerText}
           </div>
         </div>
       </foreignObject>
@@ -348,88 +375,95 @@ const drawStage = (step) => {
 };
 
 const badge = (player) => html`
-  <span class="badge"
-        style="background-color:${colors[player]}"
-        data-bs-toggle="tooltip"
-        title="${game.players[player]?.model}">
+  <span
+    class="badge"
+    style="background-color:${colors[player]}"
+    data-bs-toggle="tooltip"
+    title="${game.players[player]?.model}"
+  >
     ${player?.slice(1)}
   </span>
 `;
 
 const playerBadge = (playerId) => {
-  if (!playerId || !game) return '';
+  if (!playerId || !game) return "";
   const match = playerId.match(/Player(\d+)/);
-  return match ? badge(`P${match[1]}`) : '';
+  return match ? badge(`P${match[1]}`) : "";
 };
 
 const chatMessage = (event, step) => {
-  const message = html`<div class="d-flex align-items-start gap-2 mb-2 p-2"
-                           role="button"
-                           @click=${() => updateHash(game.game, step)}>
+  const message = html`<div
+    class="d-flex align-items-start gap-2 mb-2 p-2"
+    role="button"
+    @click=${() => updateHash(game.game, step)}
+  >
     // ...existing message content...
   </div>`;
   switch (event.type) {
-    case 'conversation':
+    case "conversation":
       return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
-        ${playerBadge(event.player_id)} <div class="text-break">${event.message}</div>
+        ${playerBadge(event.player_id)}
+        <div class="text-break">${event.message}</div>
       </div>`;
-    case 'private':
+    case "private":
       return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
         ${playerBadge(event.speaker_id)}
         <span data-bs-toggle="tooltip" title="private message to">🢂</span>
         ${playerBadge(event.target_id)}
         <div class="text-break">${event.message}</div>
       </div>`;
-    case 'preference_proposal':
+    case "preference_proposal":
       return html`<div class="d-flex align-items-center gap-2 mb-2 p-2">
         ${badge(event.proposer)}
         <span data-bs-toggle="tooltip" title="proposed to">😍</span>
         ${badge(event.target)} #${event.rank_of_target}
       </div>`;
-    case 'preference_outcome':
+    case "preference_outcome":
       return html`<div class="d-flex align-items-center gap-2 mb-2 p-2">
         ${badge(event.target)}
-        ${event.rejected ?
-          html`<span data-bs-toggle="tooltip" title="rejected">❌</span> ${badge(event.rejected)}` :
-          html`<span data-bs-toggle="tooltip" title="accepted">❤️</span> ${badge(event.accepted)}
-               ${event.replaced ? html`<span data-bs-toggle="tooltip" title="replaced">❌</span> ${badge(event.replaced)}` : ''}`}
+        ${event.rejected
+          ? html`<span data-bs-toggle="tooltip" title="rejected">❌</span> ${badge(event.rejected)}`
+          : html`<span data-bs-toggle="tooltip" title="accepted">❤️</span> ${badge(event.accepted)}
+              ${event.replaced
+                ? html`<span data-bs-toggle="tooltip" title="replaced">❌</span> ${badge(event.replaced)}`
+                : ""}`}
       </div>`;
-    case 'preference_result':
+    case "preference_result":
       return html`<div class="text-muted small mb-2">Alliances formed</div>`;
-    case 'private_vote_reason':
-    case 'private_revote_reason':
-    case 'private_jury_reason':
+    case "private_vote_reason":
+    case "private_revote_reason":
+    case "private_jury_reason":
       return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
         ${playerBadge(event.voter_id)}
         <span data-bs-toggle="tooltip" title="voted to eliminate">👎</span>
         ${playerBadge(event.target_id)}
         <div class="text-break">${event.reason}</div>
       </div>`;
-    case 'vote':
+    case "vote":
       return html`<div class="d-flex gap-2 mb-2">
         ${playerBadge(event.voter_id)} 👎 ${playerBadge(event.target_id)}
       </div>`;
-    case 'elimination':
+    case "elimination":
       return html`<div class="text-muted small mb-2">Elimination starts</div>`;
-    case 'final_results':
-      return html`<div class="d-flex gap-2 mb-2">
-        Winners: ${event.winners.map(w => badge(w))}
-      </div>`;
+    case "final_results":
+      return html`<div class="d-flex gap-2 mb-2">Winners: ${event.winners.map((w) => badge(w))}</div>`;
   }
 };
 
 const tableRow = (round, data, eliminated) => html`
   <tr>
     <td class="text-end">${round}</td>
-    ${Object.keys(colors).map(p => html`
-      <td class="text-center ${eliminated[p] < round ? 'bg-secondary bg-opacity-25' : ''}">${badge(data[p])}</td>
-    `)}
+    ${Object.keys(colors).map(
+      (p) => html`
+        <td class="text-center ${eliminated[p] < round ? "bg-secondary bg-opacity-25" : ""}">${badge(data[p])}</td>
+      `
+    )}
   </tr>
 `;
 
 const table = (step, type) => {
   const data = game.steps[step][type];
-  if (!data?.length) return '';
+  if (!data?.length) return "";
 
   return html`
     <div class="table-responsive">
@@ -437,7 +471,7 @@ const table = (step, type) => {
         <thead class="table-dark">
           <tr>
             <th class="text-end">#</th>
-            ${Object.keys(colors).map(p => html`<th class="text-center">${badge(p)}</th>`)}
+            ${Object.keys(colors).map((p) => html`<th class="text-center">${badge(p)}</th>`)}
           </tr>
         </thead>
         <tbody>
@@ -458,31 +492,30 @@ const updateHash = (filename, step) => {
 
 const handleHashChange = () => redraw(+new URLSearchParams(location.hash.slice(2)).get("step") || 0);
 
-const redraw = step => {
+const redraw = (step) => {
   const state = game.steps[step];
   const stage = stages[state.event.type];
   const activePlayers = Object.keys(game.players).length - Object.keys(state.eliminated).length;
 
-  document.getElementById('roundVal').textContent = state.round;
-  document.getElementById('stageVal').textContent = stage.text;
-  document.getElementById('stageVal').className = `fs-4 fw-bold badge ${stage.class}`;
-  document.getElementById('playersVal').textContent = activePlayers;
+  document.getElementById("roundVal").textContent = state.round;
+  document.getElementById("stageVal").textContent = stage.text;
+  document.getElementById("stageVal").className = `fs-4 fw-bold badge ${stage.class}`;
+  document.getElementById("playersVal").textContent = activePlayers;
 
-  render(drawStage(step), document.getElementById('step'));
-  render(table(step, 'alliances'), document.getElementById('alliancesSection').querySelector('.accordion-body'));
-  render(table(step, 'votes'), document.getElementById('eliminationsSection').querySelector('.accordion-body'));
+  render(drawStage(step), document.getElementById("step"));
+  render(table(step, "alliances"), document.getElementById("alliancesSection").querySelector(".accordion-body"));
+  render(table(step, "votes"), document.getElementById("eliminationsSection").querySelector(".accordion-body"));
 
-  const chatHistory = game.steps.slice(0, step + 1).map(s => chatMessage(s.event));
-  render(html`
-    <div style="max-height: 15em; overflow-y: auto" class="pe-2">
-      ${chatHistory}
-    </div>
-  `, document.getElementById('chatSection').querySelector('.accordion-body'));
+  const chatHistory = game.steps.slice(0, step + 1).map((s) => chatMessage(s.event));
+  render(
+    html` <div style="max-height: 15em; overflow-y: auto" class="pe-2">${chatHistory}</div> `,
+    document.getElementById("chatSection").querySelector(".accordion-body")
+  );
 
   // Initialize tooltips
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el =>
-    new bootstrap.Tooltip(el, { placement: 'top' })
-  );
+  document
+    .querySelectorAll('[data-bs-toggle="tooltip"]')
+    .forEach((el) => new bootstrap.Tooltip(el, { placement: "top" }));
 };
 
 const init = async () => {
