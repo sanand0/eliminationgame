@@ -136,7 +136,7 @@ import { render, html, svg } from "https://cdn.jsdelivr.net/npm/lit-html@3/+esm"
 
 const RADIUS = 300; // SVG viewport radius
 const PLAYER_RADIUS = 25; // Player circle radius
-const CENTER_RADIUS = 150; // Center text container radius
+const CENTER_RADIUS = 135; // Center text container radius
 
 // Get player positions in a circle
 const getPositions = () => {
@@ -362,8 +362,7 @@ const drawStage = (step) => {
       >
         <div
           xmlns="http://www.w3.org/1999/xhtml"
-          class="d-flex align-items-center justify-content-center h-100 p-4"
-          style="background: rgba(var(--bs-body-color-rgb), 0.1); border-radius: 1rem; font-size: 0.7rem;"
+          class="conversation d-flex align-items-center justify-content-center h-100 p-4"
         >
           <div class="text-center">
             ${getHeaderText() ? html`<h6 class="mb-2">${getHeaderText()}</h6>` : ""} ${centerText}
