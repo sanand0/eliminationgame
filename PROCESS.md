@@ -472,3 +472,12 @@ I formatted with Prettier, added arrows for alliances, and a few other minor man
 because I'm tired of LLMs.
 
 ![Screenshots](img/manual-tweaks.webp)
+
+## Manual bug fixes
+
+- Center textbox is smaller. Highlight on hover
+- Remove existing alliances before adding new
+- Improve the arrow and circle styling
+- Remove eliminated players after jury round
+- Click on alliance/voting row to jump to a round
+- Click on chat history to jump to step
