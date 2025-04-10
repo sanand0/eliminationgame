@@ -69,8 +69,10 @@ const loadGame = async (filename) => {
         if (event.rejected) {
           // Do nothing for rejected proposals
         } else {
-          // Remove replaced player from any existing alliances
-          if (event.replaced) delete currentAlliances[event.replaced];
+          // Remove existing alliances
+          for (let player of [event.accepted, event.target])
+            if (currentAlliances[player] && currentAlliances[currentAlliances[player]])
+              delete currentAlliances[currentAlliances[player]];
           // Add new alliance
           currentAlliances[event.accepted] = event.target;
           currentAlliances[event.target] = event.accepted;
@@ -89,6 +91,11 @@ const loadGame = async (filename) => {
         const player = `P${event.eliminated_player.match(/Player(\d+)/)[1]}`;
         eliminated[player] = event.round;
       }
+
+      // Update eliminated players after jury round
+      if (event.type == "final_results")
+        for (const player in players)
+          if (event.winners.indexOf(players[player].id) < 0) eliminated[player] = eliminated[player] ?? currentRound;
 
       return {
         step,
@@ -136,7 +143,7 @@ import { render, html, svg } from "https://cdn.jsdelivr.net/npm/lit-html@3/+esm"
 
 const RADIUS = 300; // SVG viewport radius
 const PLAYER_RADIUS = 25; // Player circle radius
-const CENTER_RADIUS = 150; // Center text container radius
+const CENTER_RADIUS = 135; // Center text container radius
 
 // Get player positions in a circle
 const getPositions = () => {
@@ -154,22 +161,23 @@ const getPositions = () => {
 
 // Draw arrow between points with optional color and highlight
 const drawArrow = (x1, y1, x2, y2, color = "black", highlight = false) => {
+  const id = `arrow-${color}`.replace(/[^a-zA-Z0-9-]/g, "-");
   // Calculate midpoint
   const mx = (x1 + x2) / 2;
   const my = (y1 + y2) / 2;
   return svg`
     <defs>
-      <marker id="arrow-${color}" viewBox="0 0 10 10" refX="5" refY="5"
+      <marker id="${id}" viewBox="0 0 10 10" refX="5" refY="5"
               markerWidth="6" markerHeight="6" orient="auto">
         <path d="M 0 0 L 10 5 L 0 10 z" fill="${color}"/>
       </marker>
     </defs>
     <line x1="${x1}" y1="${y1}" x2="${mx}" y2="${my}"
-          stroke="${color}" stroke-width="${highlight ? 3 : 2}"
-          marker-end="url(#arrow-${color})"
+          stroke="${color}" stroke-width="${highlight ? 3 : 1}"
+          marker-end="url(#${id})"
           opacity="${highlight ? 0.8 : 0.4}"/>
     <line x1="${mx}" y1="${my}" x2="${x2}" y2="${y2}"
-          stroke="${color}" stroke-width="${highlight ? 3 : 2}"
+          stroke="${color}" stroke-width="${highlight ? 3 : 1}"
           opacity="${highlight ? 0.8 : 0.4}"/>
   `;
 };
@@ -193,9 +201,7 @@ const drawStage = (step) => {
   Object.entries(currentAlliances).forEach(([from, to]) => {
     const f = positions[from];
     const t = positions[to];
-    if (f && t) {
-      backgroundArrows.push(drawArrow(f.x, f.y, t.x, t.y, "green", false));
-    }
+    if (f && t) backgroundArrows.push(drawArrow(f.x, f.y, t.x, t.y, "rgba(0, 128, 0, 0.5)", false));
   });
 
   // Draw votes
@@ -203,9 +209,7 @@ const drawStage = (step) => {
   Object.entries(currentVotes).forEach(([from, to]) => {
     const f = positions[from];
     const t = positions[`P${to}`];
-    if (f && t) {
-      backgroundArrows.push(drawArrow(f.x, f.y, t.x, t.y, "red", false));
-    }
+    if (f && t) backgroundArrows.push(drawArrow(f.x, f.y, t.x, t.y, "red", false));
   });
 
   // Prepare highlights and arrows based on event type
@@ -245,7 +249,7 @@ const drawStage = (step) => {
         const pos = positions[p];
         highlights.push(svg`
           <circle cx="${pos.x}" cy="${pos.y}" r="${PLAYER_RADIUS * 2.5}"
-                  fill="white" opacity="0.2"/>
+                  fill="var(--bs-body-color)" opacity="0.2"/>
         `);
       }
       centerText = state.event.message;
@@ -259,10 +263,10 @@ const drawStage = (step) => {
       if (sp && tp) {
         const s = positions[sp],
           t = positions[tp];
-        arrows.push(drawArrow(s.x, s.y, t.x, t.y, "black", true));
+        arrows.push(drawArrow(s.x, s.y, t.x, t.y, "#666666", true));
         highlights.push(svg`
           <circle cx="${s.x}" cy="${s.y}" r="${PLAYER_RADIUS * 2.5}"
-                  fill="white" opacity="0.2"/>
+                  fill="var(--bs-body-color)" opacity="0.2"/>
         `);
       }
       centerText = state.event.message;
@@ -362,8 +366,7 @@ const drawStage = (step) => {
       >
         <div
           xmlns="http://www.w3.org/1999/xhtml"
-          class="d-flex align-items-center justify-content-center h-100 p-4"
-          style="background: rgba(var(--bs-body-color-rgb), 0.1); border-radius: 1rem; font-size: 0.7rem;"
+          class="conversation d-flex align-items-center justify-content-center h-100 p-4"
         >
           <div class="text-center">
             ${getHeaderText() ? html`<h6 class="mb-2">${getHeaderText()}</h6>` : ""} ${centerText}
@@ -392,34 +395,27 @@ const playerBadge = (playerId) => {
 };
 
 const chatMessage = (event, step) => {
-  const message = html`<div
-    class="d-flex align-items-start gap-2 mb-2 p-2"
-    role="button"
-    @click=${() => updateHash(game.game, step)}
-  >
-    // ...existing message content...
-  </div>`;
   switch (event.type) {
     case "conversation":
-      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
+      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2" data-step="${step}">
         ${playerBadge(event.player_id)}
         <div class="text-break">${event.message}</div>
       </div>`;
     case "private":
-      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
+      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2" data-step="${step}">
         ${playerBadge(event.speaker_id)}
         <span data-bs-toggle="tooltip" title="private message to">🢂</span>
         ${playerBadge(event.target_id)}
         <div class="text-break">${event.message}</div>
       </div>`;
     case "preference_proposal":
-      return html`<div class="d-flex align-items-center gap-2 mb-2 p-2">
+      return html`<div class="d-flex align-items-center gap-2 mb-2 p-2" data-step="${step}">
         ${badge(event.proposer)}
         <span data-bs-toggle="tooltip" title="proposed to">😍</span>
         ${badge(event.target)} #${event.rank_of_target}
       </div>`;
     case "preference_outcome":
-      return html`<div class="d-flex align-items-center gap-2 mb-2 p-2">
+      return html`<div class="d-flex align-items-center gap-2 mb-2 p-2" data-step="${step}">
         ${badge(event.target)}
         ${event.rejected
           ? html`<span data-bs-toggle="tooltip" title="rejected">❌</span> ${badge(event.rejected)}`
@@ -429,29 +425,31 @@ const chatMessage = (event, step) => {
                 : ""}`}
       </div>`;
     case "preference_result":
-      return html`<div class="text-muted small mb-2">Alliances formed</div>`;
+      return html`<div class="text-muted small mb-2" data-step="${step}">Alliances formed</div>`;
     case "private_vote_reason":
     case "private_revote_reason":
     case "private_jury_reason":
-      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2">
+      return html`<div class="d-flex align-items-start gap-2 mb-2 p-2" data-step="${step}">
         ${playerBadge(event.voter_id)}
         <span data-bs-toggle="tooltip" title="voted to eliminate">👎</span>
         ${playerBadge(event.target_id)}
         <div class="text-break">${event.reason}</div>
       </div>`;
     case "vote":
-      return html`<div class="d-flex gap-2 mb-2">
+      return html`<div class="d-flex gap-2 mb-2" data-step="${step}">
         ${playerBadge(event.voter_id)} 👎 ${playerBadge(event.target_id)}
       </div>`;
     case "elimination":
-      return html`<div class="text-muted small mb-2">Elimination starts</div>`;
+      return html`<div class="text-muted small mb-2" data-step="${step}">Elimination starts</div>`;
     case "final_results":
-      return html`<div class="d-flex gap-2 mb-2">Winners: ${event.winners.map((w) => badge(w))}</div>`;
+      return html`<div class="d-flex gap-2 mb-2" data-step="${step}">
+        Winners: ${event.winners.map((w) => badge(w))}
+      </div>`;
   }
 };
 
 const tableRow = (round, data, eliminated) => html`
-  <tr>
+  <tr data-round="${round}">
     <td class="text-end">${round}</td>
     ${Object.keys(colors).map(
       (p) => html`
@@ -467,7 +465,7 @@ const table = (step, type) => {
 
   return html`
     <div class="table-responsive">
-      <table class="table table-sm mb-0">
+      <table class="table table-sm table-hover mb-0">
         <thead class="table-dark">
           <tr>
             <th class="text-end">#</th>
@@ -490,6 +488,13 @@ const updateHash = (filename, step) => {
   }
 };
 
+const jumpToStep = (step) => {
+  document.getElementById("timelineScrubber").value = step;
+  updateHash(game.game, step);
+  document.querySelector(".tooltip")?.remove?.();
+  document.getElementById("timelineScrubber").focus();
+};
+
 const handleHashChange = () => redraw(+new URLSearchParams(location.hash.slice(2)).get("step") || 0);
 
 const redraw = (step) => {
@@ -506,7 +511,7 @@ const redraw = (step) => {
   render(table(step, "alliances"), document.getElementById("alliancesSection").querySelector(".accordion-body"));
   render(table(step, "votes"), document.getElementById("eliminationsSection").querySelector(".accordion-body"));
 
-  const chatHistory = game.steps.slice(0, step + 1).map((s) => chatMessage(s.event));
+  const chatHistory = game.steps.slice(0, step + 1).map((s, index) => chatMessage(s.event, index));
   render(
     html` <div style="max-height: 15em; overflow-y: auto" class="pe-2">${chatHistory}</div> `,
     document.getElementById("chatSection").querySelector(".accordion-body")
@@ -517,6 +522,21 @@ const redraw = (step) => {
     .querySelectorAll('[data-bs-toggle="tooltip"]')
     .forEach((el) => new bootstrap.Tooltip(el, { placement: "top" }));
 };
+
+document.getElementById("sidebar").addEventListener("click", function (e) {
+  const roundLink = e.target.closest("[data-round]");
+  if (roundLink) {
+    const round = +roundLink.dataset.round;
+    const stepNode = game.steps.find((step) => step.round == round);
+    if (stepNode) jumpToStep(stepNode.step);
+    return;
+  }
+  const stepLink = e.target.closest("[data-step]");
+  if (stepLink) {
+    jumpToStep(+stepLink.dataset.step);
+    return;
+  }
+});
 
 const init = async () => {
   const select = document.getElementById("gameSelect");
@@ -547,9 +567,7 @@ const init = async () => {
   if (gameFile) {
     select.value = gameFile;
     await loadGame(gameFile);
-    document.getElementById("timelineScrubber").value = step;
-    updateHash(gameFile, step);
-    redraw(step);
+    jumpToStep(step);
   }
 };
 
