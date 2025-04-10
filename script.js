@@ -69,8 +69,10 @@ const loadGame = async (filename) => {
         if (event.rejected) {
           // Do nothing for rejected proposals
         } else {
-          // Remove replaced player from any existing alliances
-          if (event.replaced) delete currentAlliances[event.replaced];
+          // Remove existing alliances
+          for (let player of [event.accepted, event.target])
+            if (currentAlliances[player] && currentAlliances[currentAlliances[player]])
+              delete currentAlliances[currentAlliances[player]];
           // Add new alliance
           currentAlliances[event.accepted] = event.target;
           currentAlliances[event.target] = event.accepted;
