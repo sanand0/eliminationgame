@@ -488,6 +488,13 @@ const updateHash = (filename, step) => {
   }
 };
 
+const jumpToStep = (step) => {
+  document.getElementById("timelineScrubber").value = step;
+  updateHash(game.game, step);
+  document.querySelector(".tooltip")?.remove?.();
+  document.getElementById("timelineScrubber").focus();
+};
+
 const handleHashChange = () => redraw(+new URLSearchParams(location.hash.slice(2)).get("step") || 0);
 
 const redraw = (step) => {
@@ -521,19 +528,13 @@ document.getElementById("sidebar").addEventListener("click", function (e) {
   if (roundLink) {
     const round = +roundLink.dataset.round;
     const stepNode = game.steps.find((step) => step.round == round);
-    if (stepNode) {
-      document.getElementById("timelineScrubber").value = stepNode.step;
-      updateHash(game.game, stepNode.step);
-      document.querySelector(".tooltip")?.remove?.();
-    }
+    if (stepNode) jumpToStep(stepNode.step);
     return;
   }
   const stepLink = e.target.closest("[data-step]");
   if (stepLink) {
-    const step = +stepLink.dataset.step;
-    document.getElementById("timelineScrubber").value = step;
-    updateHash(game.game, step);
-    document.querySelector(".tooltip")?.remove?.();
+    jumpToStep(+stepLink.dataset.step);
+    return;
   }
 });
 
@@ -566,9 +567,7 @@ const init = async () => {
   if (gameFile) {
     select.value = gameFile;
     await loadGame(gameFile);
-    document.getElementById("timelineScrubber").value = step;
-    updateHash(gameFile, step);
-    redraw(step);
+    jumpToStep(step);
   }
 };
 
