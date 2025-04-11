@@ -49,6 +49,8 @@ Based on its recommendation (which was detailed), I'll use this sequence:
 - Sidebar 3: ELIMINATIONS Section
 - Refinements, Theming, & Final Touches
 
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/05a9aab)
+
 ## Create a scaffolding
 
 I ran this prompt on GitHub Copilot - Edit mode - Claude 3.5 Sonnet:
@@ -96,6 +98,8 @@ It generated this scaffolding.
 
 ![Scaffolding 1](img/scaffolding-1.webp)
 
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/50a377b)
+
 ## Improve the scaffolding
 
 ```
@@ -121,6 +125,8 @@ At this point, I made 3 manual edits because I felt I could do these better than
 1. Format document with... HTML Language Features
 
 ![Scaffolding 3](img/scaffolding-3.webp)
+
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/74b2820)
 
 ## Implement data loading, timeline, and URL sync
 
@@ -176,6 +182,8 @@ I also
 
 Visually, nothing changes in a big way but the slider and the dropdown change the URL properly.
 
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/36ae6aa)
+
 ## Data structure generation
 
 Independently, I asked ChatGPT:
@@ -229,6 +237,8 @@ This worked almost perfectly. I made these edits:
 2. Re-apply change #2 I made manually in the last iteration (replacing the URL with the GitHub CDN).
    That change was not there in the chat window, Copilot did _not_ pick it up.
 
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/22b6035)
+
 ## Render alliances and eliminations
 
 ```
@@ -259,6 +269,8 @@ This worked perfectly. I manually made one correction to an earlier mistake I no
 
 ![Screenshot](img/render-alliances-and-eliminations.webp)
 
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/bcc4b32)
+
 ## Show eliminated players clearly
 
 ```
@@ -276,6 +288,8 @@ Again, nearly perfect. I made one manual correction:
 1. Replace `game.steps[step].eliminated[p] <= i + 1` with `game.steps[step].eliminated[p] < i + 1`
 
 ![Screenshot](img/show-eliminated-players-clearly.webp)
+
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/75206f9)
 
 ## Show conversation history
 
@@ -308,6 +322,8 @@ Rewrite existing code inside redraw(), drawTable, drawBadge to use lit-html.
 This worked perfectly. (Note: I had manually added a `console.log()` to debug. I'll remove that later.)
 
 ![Screenshot](img/show-conversation-history.webp)
+
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/9903e9f)
 
 ## Improve UI
 
@@ -378,6 +394,8 @@ This worked perfectly too.
 
 ![Screenshot](img/improve-ui.webp)
 
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/91e001b)
+
 ## Render the stage
 
 ```
@@ -423,6 +441,8 @@ At this point, we're nearly there!
 
 ![Screenshot](img/render-the-stage.webp)
 
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/a36f65a)
+
 ## Correct UI errors
 
 ```
@@ -440,13 +460,14 @@ That worked well. I made a few manual edits:
 1. Fix winner formatting by replacing `getModelName(w)` with `game.players[w].model` and `playerBadge(w)` with `badge(w)`
 2. Setting the step on page load in the UI: `document.getElementById("timelineScrubber").value = step;`
 
-
 ```
 - In the alliances and voting tables, make the table header stand out with a contrasting color.
 - In the center text message, begin with a <h6> mentioning the speaker or initiator
 ```
 
 ![Screenshot](img/correct-ui-errors.webp)
+
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/17d3217)
 
 ## Tweaks
 
@@ -466,12 +487,16 @@ Then I prompted:
 
 ![Screenshot](img/tweaks.webp)
 
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/5888294)
+
 ## Manual edits
 
 I formatted with Prettier, added arrows for alliances, and a few other minor manual changes
 because I'm tired of LLMs.
 
 ![Screenshots](img/manual-tweaks.webp)
+
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/5eb607f)
 
 ## Manual bug fixes
 
@@ -481,3 +506,28 @@ because I'm tired of LLMs.
 - Remove eliminated players after jury round
 - Click on alliance/voting row to jump to a round
 - Click on chat history to jump to step
+
+[🔗 Commit](https://github.com/sanand0/eliminationgame/commit/fd8bb7e)
+
+## Add documentation
+
+I manually made these changes:
+
+- Add README.md explaining the process, with screenshots
+- Update home page with scary quotes from LLMs
+- Zoom the gameplay a bit for better visibility
+- Ensure hash changes update the visual robustly
+
+Then I had it update the home page with instructions:
+
+```
+Using #file:gameplay.webp and #file:quotes.js and #file:script.js update the usage in #file:index.html to provide clear, CONCISE information about all the features in this app and how to use them. Don't miss out any feature.
+```
+
+![Screenshot](img/docs-1.webp)
+
+```
+Improve the look and feel of these instructions. For example, add icons, colors, arrow key icons, etc. to make it look more visually attractive and engaging. Also, replace the title "Usage" with something more actionable. Make this section stand out SUBTLY.
+```
+
+![Screenshot](img/docs-2.webp)

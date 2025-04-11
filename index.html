@@ -8,18 +8,15 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <style>
+    .narrative {
+      max-width: 40rem;
+    }
+
     .stage-container {
       aspect-ratio: 1;
       width: 100%;
       max-height: calc(100vh - 100px);
       margin-bottom: 1rem;
-    }
-
-    .game-stage {
-      width: 100%;
-      height: 100%;
-      background: var(--bs-tertiary-bg);
-      border-radius: 8px;
     }
 
     [data-round],
@@ -53,6 +50,18 @@
 
       <div class="collapse navbar-collapse" id="navbarContent">
         <div class="d-flex align-items-center gap-3 flex-grow-1 me-3">
+
+          <div class="position-relative">
+            <div class="text-center">
+              <div class="text-light small opacity-75">QUOTES</div>
+              <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-chat-fill"></i>
+              </button>
+              <ul class="dropdown-menu" id="quotes">
+              </ul>
+            </div>
+          </div>
+
           <div class="text-center">
             <div class="text-light small opacity-75">GAME</div>
             <select class="form-select form-select-lg py-1" id="gameSelect">
@@ -75,8 +84,11 @@
             <div id="playersVal" class="fs-4 fw-bold badge text-bg-primary">10</div>
           </div>
 
-          <div class="flex-grow-1">
-            <input type="range" class="form-range" id="timelineScrubber" min="0" max="100" value="0">
+          <div class="flex-grow-1 text-center">
+            <div class="text-light small opacity-75">MOVE SLIDER OR PRESS
+              <i class="bi bi-arrow-left-square-fill"></i> ARROW KEYS
+              <i class="bi bi-arrow-right-square-fill"></i> TO SEE STEPS</div>
+            <input type="range" class="form-range my-2" id="timelineScrubber" min="0" max="100" value="0">
           </div>
         </div>
 
@@ -98,9 +110,65 @@
     <div class="row mt-3">
       <div class="col-lg-8">
         <div class="stage-container">
-          <div class="game-stage d-flex align-items-center justify-content-center">
-            <div id="step" class="display-1 text-body-secondary"></div>
+          <div id="step" class="display-1 text-body-secondary w-100 h-100"></div>
+
+          <h1 class="display-1 my-4 text-center">Elimination Game</h1>
+          <h2 class="display-6 text-center mb-5">How do LLMs play Survivor?</h2>
+          <div class="mx-auto narrative">
+            <p><a href="https://x.com/lechmazur" target="_blank">@lechmazur</a> built an
+              <a href="https://github.com/lechmazur/elimination_game/" target="_blank">elimination game benchmark</a>
+              that&#39;s like LLMs playing Survivor. Models talk to each other, form alliances, and vote each other
+              out.</p>
+            <p>The <a href="https://github.com/lechmazur/elimination_game/tree/main/logs" target="_blank">logs</a>
+              are a treasure trove of insights into how they&#39;d game the system if told to survive.
+              I <a href="https://github.com/sanand0/eliminationgame">built this visualization</a> to explore
+              the conversations and learn.</p>
+
+            <div class="p-3 pb-0 rounded-3 border border-2 bg-body-tertiary">
+              <h2 class="h4 mb-3"><i class="bi bi-joystick me-2"></i>How to Use This Visualization</h2>
+              <ul class="list-unstyled">
+                <li class="mb-3">
+                  <i class="bi bi-collection-play me-2 text-primary"></i><strong>Start Here:</strong>
+                  Select a game from the dropdown above, or a quote from the cards below
+                </li>
+                <li class="mb-3">
+                  <i class="bi bi-clock-history me-2 text-primary"></i><strong>Navigate:</strong>
+                  <ul class="list-unstyled ps-4 mt-1">
+                    <li class="mb-2">
+                      <i class="bi bi-arrows-move me-2"></i><strong>Move slider</strong> on top or
+                      <kbd><i class="bi bi-arrow-left"></i></kbd>
+                      <kbd><i class="bi bi-arrow-right"></i></kbd>
+                      keys to move through time
+                    </li>
+                    <li class="mb-2"><i class="bi bi-chat-dots me-2"></i><strong>Click messages</strong> in chat to jump to that moment</li>
+                    <li class="mb-2"><i class="bi bi-table me-2"></i><strong>Click rows</strong> in tables to jump to specific rounds</li>
+                    <li class="mb-2"><i class="bi bi-quote me-2"></i><strong>Explore quotes</strong> from the dropdown menu</li>
+                  </ul>
+                </li>
+                <li class="mb-3">
+                  <i class="bi bi-graph-up me-2 text-primary"></i><strong>Understand the Visuals:</strong>
+                  <ul class="list-unstyled ps-4 mt-1">
+                    <li class="mb-2"><i class="bi bi-diagram-2 text-success me-2"></i>Green lines show active alliances</li>
+                    <li class="mb-2"><i class="bi bi-diagram-2 text-danger me-2"></i>Red lines indicate votes</li>
+                    <li class="mb-2"><i class="bi bi-diagram-2 text-secondary me-2"></i>Grey lines indicate conversations</li>
+                    <li class="mb-2"><i class="bi bi-person-fill-slash me-2"></i>Faded players are eliminated</li>
+                  </ul>
+                </li>
+                <li class="mb-3">
+                  <i class="bi bi-gear me-2 text-primary"></i><strong>Additional Features:</strong>
+                  <ul class="list-unstyled ps-4 mt-1">
+                    <li class="mb-2"><i class="bi bi-layout-sidebar me-2"></i>Toggle panels to focus on specific aspects</li>
+                    <li class="mb-2"><i class="bi bi-circle-half me-2"></i>Switch between light/dark themes as needed</li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+
+            <h2 class="h3 mt-5 mb-3">Scary behaviors</h2>
+            <p>I see twelve kinds of scary behaviors. Here is an example from each.
+              (Click on the quote to see the context.)</p>
           </div>
+          <div id="behaviors" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4"></div>
         </div>
       </div>
       <div class="col-lg-4" id="sidebar">
@@ -148,6 +216,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@gramex/ui@0.3.1/dist/dark-theme.js" type="module"></script>
+  <script src="quotes.js" type="module"></script>
   <script src="script.js" type="module"></script>
 </body>
 

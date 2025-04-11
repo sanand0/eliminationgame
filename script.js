@@ -144,6 +144,7 @@ import { render, html, svg } from "https://cdn.jsdelivr.net/npm/lit-html@3/+esm"
 const RADIUS = 300; // SVG viewport radius
 const PLAYER_RADIUS = 25; // Player circle radius
 const CENTER_RADIUS = 135; // Center text container radius
+const ZOOM = 0.2; // Extent to zoom in
 
 // Get player positions in a circle
 const getPositions = () => {
@@ -332,7 +333,11 @@ const drawStage = (step) => {
   }
 
   return html`
-    <svg viewBox="0 0 ${RADIUS * 2} ${RADIUS * 2}" class="w-100 h-100" width="1000">
+    <svg
+      viewBox="${RADIUS * ZOOM} ${RADIUS * ZOOM} ${RADIUS * (2 - ZOOM * 2)} ${RADIUS * (2 - ZOOM * 2)}"
+      class="w-100 h-100"
+      width="1000"
+    >
       ${backgroundArrows} ${highlights} ${arrows}
 
       <!-- Draw players -->
@@ -488,14 +493,24 @@ const updateHash = (filename, step) => {
   }
 };
 
+const handleHashChange = async () => {
+  const q = new URLSearchParams(location.hash.slice(2));
+  const gameFile = q.get("game");
+  document.getElementById("step").classList.toggle("d-none", !gameFile);
+  if (!gameFile) return;
+  if (gameFile != game?.game) await loadGame(gameFile);
+  const step = +q.get("step") || 0;
+  document.getElementById("gameSelect").value = gameFile;
+  jumpToStep(step);
+  redraw(step);
+};
+
 const jumpToStep = (step) => {
   document.getElementById("timelineScrubber").value = step;
   updateHash(game.game, step);
   document.querySelector(".tooltip")?.remove?.();
   document.getElementById("timelineScrubber").focus();
 };
-
-const handleHashChange = () => redraw(+new URLSearchParams(location.hash.slice(2)).get("step") || 0);
 
 const redraw = (step) => {
   const state = game.steps[step];
@@ -559,16 +574,9 @@ const init = async () => {
   select.addEventListener("change", (e) => e.target.value && loadGame(e.target.value));
   document
     .getElementById("timelineScrubber")
-    .addEventListener("input", (e) => game && updateHash(select.value, e.target.value));
+    .addEventListener("input", (e) => game && updateHash(game.game, e.target.value));
   window.addEventListener("hashchange", handleHashChange);
-
-  const gameFile = new URLSearchParams(location.hash.slice(2)).get("game");
-  const step = +new URLSearchParams(location.hash.slice(2)).get("step") || 0;
-  if (gameFile) {
-    select.value = gameFile;
-    await loadGame(gameFile);
-    jumpToStep(step);
-  }
+  handleHashChange();
 };
 
 init();
