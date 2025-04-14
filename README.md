@@ -1,6 +1,6 @@
 # Elimination Game Visualization
 
-[@lechmazur](https://x.com/lechmazur) build an [elimination game benchmark](https://github.com/lechmazur/elimination_game/)
+[@lechmazur](https://x.com/lechmazur) built an [elimination game benchmark](https://github.com/lechmazur/elimination_game/)
 that's like LLMs playing Survivor.
 
 This is a treasure trove of information -- insight into how they'd game the system if told to survive.
